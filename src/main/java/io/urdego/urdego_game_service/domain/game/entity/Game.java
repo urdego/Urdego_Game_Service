@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 @Getter
+@Setter
 @RedisHash("game")
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game {
