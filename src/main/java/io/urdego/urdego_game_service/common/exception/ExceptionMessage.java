@@ -12,8 +12,9 @@ public enum ExceptionMessage {
     ROOM_FULL("해당 대기방의 참여 인원이 초과되었습니다.", HttpStatus.CONFLICT, "Room is Full"),
     CONTENTS_OVER("선택 가능한 컨텐츠의 개수가 초과되었습니다.", HttpStatus.BAD_REQUEST, "Exceeds max content"),
 
-    // 게임
+    // 게임,
     GAME_NOT_FOUND("해당 게임을 찾을 수 없습니다.", HttpStatus.NOT_FOUND, "Game not found"),
+    GAME_ALREADY_COMPLETED("이미 종료된 게임입니다.", HttpStatus.CONFLICT, "Game is already over"),
 
     // 라운드
     QUESTION_NOT_FOUND("문제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND, "Question not found"),
