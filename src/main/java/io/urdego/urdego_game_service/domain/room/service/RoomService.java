@@ -1,25 +1,31 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
+import io.urdego.urdego_game_service.api.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.api.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.api.room.dto.response.RoomCreateRes;
+import io.urdego.urdego_game_service.api.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 public interface RoomService {
 
     // 방 생성
-    Room createRoom(RoomCreateReq request);
+    RoomCreateRes createRoom(RoomCreateReq request);
 
     // 방 참가
-    Room joinRoom(String roomId, Long userId);
+    RoomInfoRes joinRoom(String roomId, Long userId);
 
     // 컨텐츠 등록
-    void registerContents(String roomId, Long userId, List<String> contentIds);
+    void registerContents(ContentSelectReq request);
 
     // component
     // 방 상태 변경
     Room updateRoomStatusById(String roomId, Status status);
 
+    // 방 정보 조회
+    @Transactional(readOnly = true)
     Room findRoomById(String roomId);
 }

@@ -1,6 +1,9 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
+import io.urdego.urdego_game_service.api.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.api.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.api.room.dto.response.RoomCreateRes;
+import io.urdego.urdego_game_service.api.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.room.RoomException;
@@ -23,7 +26,7 @@ public class RoomServiceImpl implements RoomService {
 
     // 대기방 생성
     @Override
-    public Room createRoom(RoomCreateReq request) {
+    public RoomCreateRes createRoom(RoomCreateReq request) {
         Room room = Room.builder()
                 .roomId(UUID.randomUUID().toString())
                 .status(Status.WAITING)
@@ -34,32 +37,38 @@ public class RoomServiceImpl implements RoomService {
                 .playerContents(new HashMap<>())
                 .build();
 
-        return roomRepository.save(room);
+        roomRepository.save(room);
+
+        return RoomCreateRes.from(room);
     }
 
     // 대기방 참여
     @Override
-    public Room joinRoom(String roomId, Long userId) {
+    public RoomInfoRes joinRoom(String roomId, Long userId) {
         Room room = findRoomById(roomId);
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
         room.getCurrentPlayers().add(userId.toString());
 
-        return roomRepository.save(room);
+        roomRepository.save(room);
+
+        return RoomInfoRes.from(room);
     }
 
     // 컨텐츠 등록
     @Override
-    public void registerContents(String roomId, Long userId, List<String> contentIds) {
-        Room room = findRoomById(roomId);
-        if (contentIds.size() > 5) {
+    public void registerContents(ContentSelectReq request) {
+        Room room = findRoomById(request.roomId());
+        if (request.contentIds().size() > 5) {
             throw new RoomException(ExceptionMessage.CONTENTS_OVER);
         }
 
-        room.getPlayerContents().put(userId.toString(), contentIds);
+        room.getPlayerContents().put(request.userId().toString(), request.contentIds());
         roomRepository.save(room);
     }
+
+    // 컨텐츠 수정
 
     // 대기방 상태 변경
     @Override
@@ -70,7 +79,9 @@ public class RoomServiceImpl implements RoomService {
         return roomRepository.save(room);
     }
 
+    // 방 정보 조회
     @Override
+    @Transactional(readOnly = true)
     public Room findRoomById(String roomId) {
         return roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomException(ExceptionMessage.ROOM_NOT_FOUND));
