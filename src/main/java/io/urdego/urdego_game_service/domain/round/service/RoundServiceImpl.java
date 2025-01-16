@@ -1,11 +1,13 @@
 package io.urdego.urdego_game_service.domain.round.service;
 
+import io.urdego.urdego_game_service.api.round.dto.request.AnswerReq;
+import io.urdego.urdego_game_service.api.round.dto.request.QuestionReq;
+import io.urdego.urdego_game_service.api.round.dto.response.AnswerRes;
+import io.urdego.urdego_game_service.api.round.dto.response.QuestionRes;
 import io.urdego.urdego_game_service.common.client.ContentServiceClient;
 import io.urdego.urdego_game_service.common.client.dto.ContentRes;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.round.QuestionException;
-import io.urdego.urdego_game_service.domain.game.entity.Game;
-import io.urdego.urdego_game_service.domain.game.service.GameService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
@@ -31,8 +33,9 @@ public class RoundServiceImpl implements RoundService {
     private final ContentServiceClient contentServiceClient;
     private final RoomService roomService;
 
+    // 문제 생성
     @Override
-    public Question createQuestion(String roomId, int roundNum) {
+    public Question createQuestion(String roomId) {
         Room room = roomService.findRoomById(roomId);
 
         List<String> allContents = room.getPlayerContents().values()
@@ -64,24 +67,39 @@ public class RoundServiceImpl implements RoundService {
         return questionRepository.save(question);
     }
 
-    // 유저별 정답 제출
+    // 문제 출제
     @Override
-    public Answer submitAnswer(String gameId, int roundNum, String userId, double latitude, double longitude) {
-        Question question = questionRepository.findById(gameId + ":" + roundNum)
-                .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
+    public QuestionRes getQuestion(QuestionReq request) {
+        Question question = findQuestionById(request.questionId());
+        return QuestionRes.from(question);
+    }
 
-        double distance = calculateDistance(latitude, longitude, question.getLatitude(), question.getLongitude());
+    // 유저별 정답 제출 및 거리 계산
+    @Override
+    public AnswerRes submitAnswer(AnswerReq request) {
+        Question question = findQuestionById(request.questionId());
+
+        double distance = calculateDistance(request.latitude(), request.longitude(), question.getLatitude(), question.getLongitude());
 
         Answer answer = Answer.builder()
                 .answerId(UUID.randomUUID().toString())
-                .gameId(gameId)
-                .roundNum(roundNum)
-                .userId(userId)
-                .latitude(latitude)
-                .longitude(longitude)
+                .userId(request.userId())
+                .questionId(request.questionId())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
                 .build();
 
-        return answerRepository.save(answer);
+        answerRepository.save(answer);
+
+        return AnswerRes.from(answer);
+    }
+
+    // 문제 정보 조회
+    @Transactional(readOnly = true)
+    @Override
+    public Question findQuestionById(String questionId) {
+        return questionRepository.findById(questionId)
+                .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
     }
 
     // 거리 계산

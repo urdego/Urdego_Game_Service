@@ -20,18 +20,18 @@ public class Game {
     private String roomId;
     private Status status;
     private List<String> players;
-    private List<String> questions;
+    private List<String> questionIds;
     private Map<String, Integer> scores;
     private Instant startedAt;
     private Instant endedAt;
 
     @Builder
-    public Game(String gameId, String roomId, Status status, List<String> players, List<String> questions, Map<String, Integer> scores, Instant startedAt, Instant endedAt) {
+    public Game(String gameId, String roomId, Status status, List<String> players, List<String> questionIds, Map<String, Integer> scores, Instant startedAt, Instant endedAt) {
         this.gameId = gameId;
         this.roomId = roomId;
         this.status = status;
         this.players = players;
-        this.questions = questions;
+        this.questionIds = questionIds;
         this.scores = scores;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
