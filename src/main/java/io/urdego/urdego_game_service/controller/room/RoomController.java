@@ -1,7 +1,7 @@
-package io.urdego.urdego_game_service.api.room;
+package io.urdego.urdego_game_service.controller.room;
 
-import io.urdego.urdego_game_service.api.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomCreateRes;
+import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
 

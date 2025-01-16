@@ -1,4 +1,4 @@
-package io.urdego.urdego_game_service.api.game.dto.response;
+package io.urdego.urdego_game_service.controller.game.dto.response;
 
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.domain.game.entity.Game;

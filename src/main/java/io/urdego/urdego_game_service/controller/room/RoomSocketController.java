@@ -1,8 +1,8 @@
-package io.urdego.urdego_game_service.api.room;
+package io.urdego.urdego_game_service.controller.room;
 
-import io.urdego.urdego_game_service.api.room.dto.request.ContentSelectReq;
-import io.urdego.urdego_game_service.api.room.dto.request.PlayerInviteReq;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomInfoRes;
+import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.PlayerInviteReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;

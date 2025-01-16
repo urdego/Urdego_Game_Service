@@ -1,9 +1,9 @@
-package io.urdego.urdego_game_service.api.round;
+package io.urdego.urdego_game_service.controller.round;
 
-import io.urdego.urdego_game_service.api.round.dto.request.AnswerReq;
-import io.urdego.urdego_game_service.api.round.dto.request.QuestionReq;
-import io.urdego.urdego_game_service.api.round.dto.response.AnswerRes;
-import io.urdego.urdego_game_service.api.round.dto.response.QuestionRes;
+import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
+import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
+import io.urdego.urdego_game_service.controller.round.dto.response.AnswerRes;
+import io.urdego.urdego_game_service.controller.round.dto.response.QuestionRes;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;

@@ -1,8 +1,8 @@
-package io.urdego.urdego_game_service.api.game;
+package io.urdego.urdego_game_service.controller.game;
 
-import io.urdego.urdego_game_service.api.game.dto.request.GameCreateReq;
-import io.urdego.urdego_game_service.api.game.dto.response.GameCreateRes;
-import io.urdego.urdego_game_service.api.game.dto.response.GameEndRes;
+import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
+import io.urdego.urdego_game_service.controller.game.dto.response.GameCreateRes;
+import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
 import io.urdego.urdego_game_service.domain.game.service.GameService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;

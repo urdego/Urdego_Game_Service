@@ -1,8 +1,8 @@
 package io.urdego.urdego_game_service.domain.game.service;
 
-import io.urdego.urdego_game_service.api.game.dto.request.GameCreateReq;
-import io.urdego.urdego_game_service.api.game.dto.response.GameCreateRes;
-import io.urdego.urdego_game_service.api.game.dto.response.GameEndRes;
+import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
+import io.urdego.urdego_game_service.controller.game.dto.response.GameCreateRes;
+import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.game.GameException;

@@ -1,9 +1,9 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
-import io.urdego.urdego_game_service.api.room.dto.request.ContentSelectReq;
-import io.urdego.urdego_game_service.api.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomCreateRes;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomInfoRes;
+import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.room.RoomException;

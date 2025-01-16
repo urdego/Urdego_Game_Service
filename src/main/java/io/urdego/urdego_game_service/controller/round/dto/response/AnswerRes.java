@@ -1,4 +1,4 @@
-package io.urdego.urdego_game_service.api.round.dto.response;
+package io.urdego.urdego_game_service.controller.round.dto.response;
 
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
 
