@@ -10,7 +10,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-@RedisHash("room")
+@RedisHash(value = "room", timeToLive = 3600)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Room {
 

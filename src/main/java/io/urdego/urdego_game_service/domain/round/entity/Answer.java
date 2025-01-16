@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
 @Getter
-@RedisHash("answer")
+@RedisHash(value = "answer", timeToLive = 3600)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Answer {
 
