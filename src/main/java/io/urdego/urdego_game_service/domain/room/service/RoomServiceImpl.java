@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
@@ -27,13 +28,16 @@ public class RoomServiceImpl implements RoomService {
     // 대기방 생성
     @Override
     public RoomCreateRes createRoom(RoomCreateReq request) {
+        List<String> currentPlayers = new ArrayList<>();
+        currentPlayers.add(request.userId());
+
         Room room = Room.builder()
                 .roomId(UUID.randomUUID().toString())
                 .status(Status.WAITING)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
                 .timer(request.timer())
-                .currentPlayers(request.currentPlayers())
+                .currentPlayers(currentPlayers)
                 .playerContents(new HashMap<>())
                 .build();
 
