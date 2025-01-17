@@ -20,7 +20,7 @@ public class RoomSocketController {
     @MessageMapping("/room/invite")
     public void invitePlayer(PlayerInviteReq request) {
         RoomInfoRes response = roomService.joinRoom(request.roomId(), request.userId());
-        messagingTemplate.convertAndSend("/game-service/sub" + request.roomId(), response);
+        messagingTemplate.convertAndSend("/game-service/sub/" + request.roomId(), response);
     }
 
     // 컨텐츠 선택 (최대 5개, 0개일 경우 자체 컨텐츠 제공)
@@ -29,5 +29,5 @@ public class RoomSocketController {
         roomService.registerContents(request);
     }
 
-    // 준비 상태
+    // 플레이어 삭제
 }

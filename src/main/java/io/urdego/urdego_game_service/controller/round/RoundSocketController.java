@@ -12,7 +12,7 @@ import org.springframework.stereotype.Controller;
 
 @Controller
 @RequiredArgsConstructor
-public class RoundController {
+public class RoundSocketController {
 
     private final RoundService roundService;
     private final SimpMessagingTemplate messagingTemplate;
@@ -21,7 +21,7 @@ public class RoundController {
     @MessageMapping("/round/question")
     public void giveQuestion(QuestionReq request) {
         QuestionRes response = roundService.getQuestion(request);
-        messagingTemplate.convertAndSend("game-service/sub" + response.questionId(), response);
+        messagingTemplate.convertAndSend("game-service/sub/" + response.questionId(), response);
     }
 
     // 플레이어 정답 제출

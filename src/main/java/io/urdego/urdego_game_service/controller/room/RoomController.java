@@ -4,7 +4,7 @@ import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
-
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,7 +22,7 @@ public class RoomController {
     @PostMapping("/room/create")
     public ResponseEntity<RoomCreateRes> createRoom(@RequestBody RoomCreateReq request) {
         RoomCreateRes response = roomService.createRoom(request);
-        return ResponseEntity.ok().body(response);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
 }
