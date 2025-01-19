@@ -1,7 +1,7 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
-import io.urdego.urdego_game_service.controller.room.dto.request.PlayerInviteReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
@@ -49,7 +49,7 @@ public class RoomServiceImpl implements RoomService {
 
     // 대기방 참여
     @Override
-    public RoomInfoRes joinRoom(PlayerInviteReq request) {
+    public RoomInfoRes joinRoom(PlayerReq request) {
         Room room = findRoomById(request.roomId());
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
@@ -74,6 +74,23 @@ public class RoomServiceImpl implements RoomService {
     }
 
     // 컨텐츠 수정
+
+    // 플레이어 삭제
+    @Override
+    public RoomInfoRes removePlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+
+        if (!room.getCurrentPlayers().contains(request.userId().toString())) {
+            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
+        }
+
+        room.getCurrentPlayers().remove(request.userId().toString());
+        room.getPlayerContents().remove(request.userId().toString());
+
+        roomRepository.save(room);
+
+        return RoomInfoRes.from(room);
+    }
 
     // 대기방 상태 변경
     @Override
