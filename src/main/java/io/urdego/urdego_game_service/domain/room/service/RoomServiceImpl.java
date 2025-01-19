@@ -73,8 +73,6 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
     }
 
-    // 컨텐츠 수정
-
     // 플레이어 삭제
     @Override
     public RoomInfoRes removePlayer(PlayerReq request) {
@@ -105,9 +103,14 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional(readOnly = true)
     public Room findRoomById(String roomId) {
-        return roomRepository.findById(roomId)
+        Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomException(ExceptionMessage.ROOM_NOT_FOUND));
+
+        if (room.getPlayerContents() == null) {
+            room.setPlayerContents(new HashMap<>());
+        }
+
+        return room;
     }
 
-    // 방 삭제 -> TTL로 처리?
 }
