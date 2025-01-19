@@ -1,6 +1,4 @@
-package io.urdego.urdego_game_service.api.room.dto.request;
-
-import java.util.List;
+package io.urdego.urdego_game_service.controller.room.dto.request;
 
 public record RoomCreateReq(
         String userId,

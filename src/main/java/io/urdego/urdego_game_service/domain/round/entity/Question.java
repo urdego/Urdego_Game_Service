@@ -8,20 +8,24 @@ import java.util.List;
 
 @Getter
 @Setter
-@RedisHash("question")
+@RedisHash(value = "question", timeToLive = 3600)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Question {
 
     @Id
     private String questionId;
+    private String roomId;
+    private int roundNum;
     private double latitude;
     private double longitude;
     private String hint;
     private List<String> contents;
 
     @Builder
-    public Question(String questionId, double latitude, double longitude, String hint, List<String> contents) {
+    public Question(String questionId, String roomId, int roundNum, double latitude, double longitude, String hint, List<String> contents) {
         this.questionId = questionId;
+        this.roomId = roomId;
+        this.roundNum = roundNum;
         this.latitude = latitude;
         this.longitude = longitude;
         this.hint = hint;

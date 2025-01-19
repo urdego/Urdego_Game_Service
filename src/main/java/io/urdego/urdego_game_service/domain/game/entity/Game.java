@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-@RedisHash("game")
+@RedisHash(value = "game", timeToLive = 3600)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game {
 
@@ -21,18 +21,20 @@ public class Game {
     private Status status;
     private List<String> players;
     private List<String> questionIds;
-    private Map<String, Integer> scores;
+    private Map<Integer, Map<String, Integer>> roundScores;
+    private Map<String, Integer> totalScores;
     private Instant startedAt;
     private Instant endedAt;
 
     @Builder
-    public Game(String gameId, String roomId, Status status, List<String> players, List<String> questionIds, Map<String, Integer> scores, Instant startedAt, Instant endedAt) {
+    public Game(String gameId, String roomId, Status status, List<String> players, List<String> questionIds, Map<Integer, Map<String, Integer>> roundScores, Map<String, Integer> totalScores, Instant startedAt, Instant endedAt) {
         this.gameId = gameId;
         this.roomId = roomId;
         this.status = status;
         this.players = players;
         this.questionIds = questionIds;
-        this.scores = scores;
+        this.roundScores = roundScores;
+        this.totalScores = totalScores;
         this.startedAt = startedAt;
         this.endedAt = endedAt;
     }

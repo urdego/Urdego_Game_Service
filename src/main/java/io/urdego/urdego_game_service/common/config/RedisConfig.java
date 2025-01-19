@@ -14,14 +14,14 @@ public class RedisConfig {
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory redisConnectionFactory) {
         RedisTemplate<String, Object> redisTemplate = new RedisTemplate<>();
 
-        // Redis 연결
         redisTemplate.setConnectionFactory(redisConnectionFactory);
 
-        // Key 직렬화
         redisTemplate.setKeySerializer(new StringRedisSerializer());
-
-        // Value 직렬화 (JSON)
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
         redisTemplate.setValueSerializer(new GenericJackson2JsonRedisSerializer());
+        redisTemplate.setHashValueSerializer(new GenericJackson2JsonRedisSerializer());
+        
+        redisTemplate.afterPropertiesSet();
 
         return redisTemplate;
     }

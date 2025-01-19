@@ -8,7 +8,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
 @Getter
-@RedisHash("answer")
+@RedisHash(value = "answer", timeToLive = 3600)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Answer {
 
@@ -18,13 +18,15 @@ public class Answer {
     private String userId;
     private double latitude;
     private double longitude;
+    private int score;
 
     @Builder
-    public Answer(String answerId, String questionId, String userId, double latitude, double longitude) {
+    public Answer(String answerId, String questionId, String userId, double latitude, double longitude, int score) {
         this.answerId = answerId;
         this.questionId = questionId;
         this.userId = userId;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.score = score;
     }
 }

@@ -1,9 +1,10 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
-import io.urdego.urdego_game_service.api.room.dto.request.ContentSelectReq;
-import io.urdego.urdego_game_service.api.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomCreateRes;
-import io.urdego.urdego_game_service.api.room.dto.response.RoomInfoRes;
+import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.room.RoomException;
@@ -48,12 +49,12 @@ public class RoomServiceImpl implements RoomService {
 
     // 대기방 참여
     @Override
-    public RoomInfoRes joinRoom(String roomId, Long userId) {
-        Room room = findRoomById(roomId);
+    public RoomInfoRes joinRoom(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
-        room.getCurrentPlayers().add(userId.toString());
+        room.getCurrentPlayers().add(request.userId().toString());
 
         roomRepository.save(room);
 
@@ -72,7 +73,22 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
     }
 
-    // 컨텐츠 수정
+    // 플레이어 삭제
+    @Override
+    public RoomInfoRes removePlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+
+        if (!room.getCurrentPlayers().contains(request.userId().toString())) {
+            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
+        }
+
+        room.getCurrentPlayers().remove(request.userId().toString());
+        room.getPlayerContents().remove(request.userId().toString());
+
+        roomRepository.save(room);
+
+        return RoomInfoRes.from(room);
+    }
 
     // 대기방 상태 변경
     @Override
@@ -87,9 +103,14 @@ public class RoomServiceImpl implements RoomService {
     @Override
     @Transactional(readOnly = true)
     public Room findRoomById(String roomId) {
-        return roomRepository.findById(roomId)
+        Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomException(ExceptionMessage.ROOM_NOT_FOUND));
+
+        if (room.getPlayerContents() == null) {
+            room.setPlayerContents(new HashMap<>());
+        }
+
+        return room;
     }
 
-    // 방 삭제 -> TTL로 처리?
 }
