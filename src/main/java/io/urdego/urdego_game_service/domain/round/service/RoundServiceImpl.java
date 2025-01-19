@@ -80,7 +80,6 @@ public class RoundServiceImpl implements RoundService {
                     .build();
         } while (isDuplicateQuestion(newQuestion, existingQuestions));
 
-
         return questionRepository.save(newQuestion);
     }
 
@@ -91,12 +90,13 @@ public class RoundServiceImpl implements RoundService {
         return QuestionRes.from(question);
     }
 
-    // 유저별 정답 제출 및 거리 계산
+    // 유저별 정답 제출 및 거리, 점수 계산
     @Override
     public AnswerRes submitAnswer(AnswerReq request) {
         Question question = findQuestionById(request.questionId());
 
         double distance = calculateDistance(request.latitude(), request.longitude(), question.getLatitude(), question.getLongitude());
+        int score = calculateScore(distance);
 
         Answer answer = Answer.builder()
                 .answerId(UUID.randomUUID().toString())
@@ -104,11 +104,18 @@ public class RoundServiceImpl implements RoundService {
                 .questionId(request.questionId())
                 .latitude(request.latitude())
                 .longitude(request.longitude())
+                .score(score)
                 .build();
 
         answerRepository.save(answer);
 
         return AnswerRes.from(answer);
+    }
+
+    // questionId로 정답 정보 조회
+    @Override
+    public List<Answer> getAnswersByQuestionId(String questionId) {
+        return answerRepository.findByQuestionId(questionId);
     }
 
     // roomId로 문제 정보 조회
@@ -141,5 +148,17 @@ public class RoundServiceImpl implements RoundService {
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
         return EARTH_RADIUS * c;
+    }
+
+    // 점수 계산
+    private int calculateScore(double distance) {
+        final int maxScore = 1000;
+        final double maxDistance = 200.0;
+
+        if (distance > maxDistance) {
+            return 0;
+        }
+
+        return (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
     }
 }
