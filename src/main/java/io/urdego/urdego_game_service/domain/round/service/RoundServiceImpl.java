@@ -38,6 +38,9 @@ public class RoundServiceImpl implements RoundService {
     public Question createQuestion(String roomId) {
         Room room = roomService.findRoomById(roomId);
 
+        // 해당 게임의 기존 문제 조회
+        List<Question> existingQuestions = questionRepository.findAllByRoomId(roomId);
+
         List<String> allContents = room.getPlayerContents().values()
                 .stream()
                 .flatMap(Collection::stream)
@@ -51,26 +54,40 @@ public class RoundServiceImpl implements RoundService {
         }
 
         Collections.shuffle(allContents);
-        List<String> selectedContents = allContents.stream().limit(3).collect(Collectors.toList());
+        Question newQuestion;
 
-        // 첫 번째 컨텐츠 기준으로 정답 설정
-        ContentRes firstContent = contentServiceClient.getContent(selectedContents.get(0));
+        do {
+            // 첫 번째 컨텐츠 기준으로 정답 설정
+            ContentRes firstContent = contentServiceClient.getContent(allContents.get(0));
+            double targetLatitude = firstContent.latitude();
+            double targetLongitude = firstContent.longitude();
 
-        Question question = Question.builder()
-                .questionId(UUID.randomUUID().toString())
-                .latitude(firstContent.latitude())
-                .longitude(firstContent.longitude())
-                .hint(firstContent.hint())
-                .contents(selectedContents)
-                .build();
+            // 동일한 위치를 가진 컨텐츠들로 필터링
+            List<String> selectedContents = allContents.stream()
+                    .filter(contentId -> {
+                        ContentRes content = contentServiceClient.getContent(contentId);
+                        return content.latitude() == targetLatitude && content.longitude() == targetLongitude;
+                    })
+                    .limit(3)
+                    .collect(Collectors.toList());
 
-        return questionRepository.save(question);
+            newQuestion = Question.builder()
+                    .questionId(UUID.randomUUID().toString())
+                    .latitude(targetLatitude)
+                    .longitude(targetLongitude)
+                    .hint(firstContent.hint())
+                    .contents(selectedContents)
+                    .build();
+        } while (isDuplicateQuestion(newQuestion, existingQuestions));
+
+
+        return questionRepository.save(newQuestion);
     }
 
     // 문제 출제
     @Override
     public QuestionRes getQuestion(QuestionReq request) {
-        Question question = findQuestionById(request.questionId());
+        Question question = findQuestionByRoomId(request.roomId());
         return QuestionRes.from(question);
     }
 
@@ -94,12 +111,23 @@ public class RoundServiceImpl implements RoundService {
         return AnswerRes.from(answer);
     }
 
-    // 문제 정보 조회
-    @Transactional(readOnly = true)
-    @Override
-    public Question findQuestionById(String questionId) {
+    // roomId로 문제 정보 조회
+    private Question findQuestionByRoomId(String roomId) {
+        return questionRepository.findByRoomId(roomId)
+                .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
+    }
+
+    // questionId로 문제 정보 조회
+    private Question findQuestionById(String questionId) {
         return questionRepository.findById(questionId)
                 .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
+    }
+
+    // 중복 문제 체크 로직
+    private boolean isDuplicateQuestion(Question newQuestion, List<Question> existingQuestions) {
+        return existingQuestions.stream().anyMatch(existing ->
+                existing.getLatitude() == newQuestion.getLatitude() &&
+                existing.getLongitude() == newQuestion.getLongitude());
     }
 
     // 거리 계산

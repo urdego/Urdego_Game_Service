@@ -5,7 +5,6 @@ import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
 import io.urdego.urdego_game_service.controller.round.dto.response.AnswerRes;
 import io.urdego.urdego_game_service.controller.round.dto.response.QuestionRes;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
-import org.springframework.transaction.annotation.Transactional;
 
 public interface RoundService {
     // 문제 생성
@@ -16,9 +15,5 @@ public interface RoundService {
 
     // 유저별 정답 제출 및 거리 계산
     AnswerRes submitAnswer(AnswerReq request);
-
-    // 문제 가져오기
-    @Transactional(readOnly = true)
-    Question findQuestionById(String questionId);
 
 }
