@@ -114,7 +114,8 @@ public class RoundServiceImpl implements RoundService {
 
     // questionId로 정답 정보 조회
     @Override
-    public List<Answer> getAnswersByQuestionId(String questionId) {
+    @Transactional(readOnly = true)
+    public List<Answer> findAnswersByQuestionId(String questionId) {
         return answerRepository.findByQuestionId(questionId);
     }
 

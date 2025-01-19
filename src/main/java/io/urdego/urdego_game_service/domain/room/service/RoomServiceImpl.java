@@ -1,6 +1,7 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.PlayerInviteReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
@@ -48,12 +49,12 @@ public class RoomServiceImpl implements RoomService {
 
     // 대기방 참여
     @Override
-    public RoomInfoRes joinRoom(String roomId, Long userId) {
-        Room room = findRoomById(roomId);
+    public RoomInfoRes joinRoom(PlayerInviteReq request) {
+        Room room = findRoomById(request.roomId());
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
-        room.getCurrentPlayers().add(userId.toString());
+        room.getCurrentPlayers().add(request.userId().toString());
 
         roomRepository.save(room);
 

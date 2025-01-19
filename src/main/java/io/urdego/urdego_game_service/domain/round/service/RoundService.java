@@ -20,5 +20,5 @@ public interface RoundService {
     AnswerRes submitAnswer(AnswerReq request);
 
     // questionId로 정답 정보 조회
-    List<Answer> getAnswersByQuestionId(String questionId);
+    List<Answer> findAnswersByQuestionId(String questionId);
 }

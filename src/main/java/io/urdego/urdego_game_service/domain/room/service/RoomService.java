@@ -1,6 +1,7 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
+import io.urdego.urdego_game_service.controller.room.dto.request.PlayerInviteReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
@@ -14,12 +15,11 @@ public interface RoomService {
     RoomCreateRes createRoom(RoomCreateReq request);
 
     // 방 참가
-    RoomInfoRes joinRoom(String roomId, Long userId);
+    RoomInfoRes joinRoom(PlayerInviteReq request);
 
     // 컨텐츠 등록
     void registerContents(ContentSelectReq request);
 
-    // component
     // 방 상태 변경
     Room updateRoomStatusById(String roomId, Status status);
 

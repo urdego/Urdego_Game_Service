@@ -69,7 +69,7 @@ public class GameServiceImpl implements GameService {
         Game game = findGameById(request.gameId());
 
         String questionId = game.getQuestionIds().get(request.roundNum() - 1);
-        List<Answer> answers = roundService.getAnswersByQuestionId(questionId);
+        List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
 
         updateRoundScores(game, request.roundNum(), answers);
         updateTotalScores(game);
