@@ -28,10 +28,6 @@ public class RoundSocketController {
     @MessageMapping("/round/answer")
     public void submitAnswer(AnswerReq request) {
         AnswerRes response = roundService.submitAnswer(request);
-        messagingTemplate.convertAndSend("game-service/sub/");
     }
-
-    // 점수 제공
-
 
 }

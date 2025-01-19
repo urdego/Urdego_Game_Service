@@ -1,15 +1,18 @@
 package io.urdego.urdego_game_service.domain.game.service;
 
 import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
+import io.urdego.urdego_game_service.controller.game.dto.request.ScoreReq;
 import io.urdego.urdego_game_service.controller.game.dto.response.GameCreateRes;
 import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.game.GameException;
+import io.urdego.urdego_game_service.controller.game.dto.response.ScoreRes;
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
+import io.urdego.urdego_game_service.domain.round.entity.Answer;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
@@ -17,9 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Transactional
@@ -41,13 +42,14 @@ public class GameServiceImpl implements GameService {
                 .status(Status.IN_PROGRESS)
                 .players(room.getCurrentPlayers())
                 .questionIds(new ArrayList<>())
-                .scores(new HashMap<>())
+                .roundScores(new HashMap<>())
+                .totalScores(new HashMap<>())
                 .startedAt(Instant.now())
                 .build();
 
         // 초기 점수 세팅
         for (String player : room.getCurrentPlayers()) {
-            game.getScores().put(player, 0);
+            game.getTotalScores().put(player, 0);
         }
 
         // Question 생성
@@ -59,6 +61,22 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
 
         return GameCreateRes.from(game);
+    }
+
+    // 점수 계산
+    @Override
+    public ScoreRes giveScores(ScoreReq request) {
+        Game game = findGameById(request.gameId());
+
+        String questionId = game.getQuestionIds().get(request.roundNum() - 1);
+        List<Answer> answers = roundService.getAnswersByQuestionId(questionId);
+
+        updateRoundScores(game, request.roundNum(), answers);
+        updateTotalScores(game);
+
+        gameRepository.save(game);
+
+        return ScoreRes.from(game);
     }
 
     // 게임 종료
@@ -95,6 +113,32 @@ public class GameServiceImpl implements GameService {
                 .orElseThrow(() -> new GameException(ExceptionMessage.GAME_NOT_FOUND));
     }
 
-    // 게임 삭제 -> TTL로 처리?
-    // 게임 정보 인메모리 말고 계속 저장?
+    // 라운드 점수 업뎃
+    private void updateRoundScores(Game game, int roundNum, List<Answer> answers) {
+        Map<Integer, Map<String, Integer>> roundScores = game.getRoundScores();
+
+        if (!roundScores.containsKey(roundNum)) {
+            roundScores.put(roundNum, new HashMap<>());
+        }
+
+        Map<String, Integer> roundScore = roundScores.get(roundNum);
+        for (Answer answer : answers) {
+            roundScore.put(answer.getUserId(), answer.getScore());
+        }
+
+        game.setRoundScores(roundScores);
+    }
+
+    // 전체 점수 업뎃
+    private void updateTotalScores(Game game) {
+        Map<String, Integer> totalScores = game.getTotalScores();
+
+        game.getRoundScores().forEach((roundNum, roundScore) -> {
+            roundScore.forEach((userId, score) -> {
+                totalScores.put(userId, totalScores.getOrDefault(userId, 0) + score);
+            });
+        });
+
+        game.setTotalScores(totalScores);
+    }
 }

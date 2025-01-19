@@ -9,14 +9,14 @@ public record GameEndRes(
         String gameId,
         String roomId,
         Status status,
-        Map<String, Integer> scores
+        Map<String, Integer> totalScores
 ) {
     public static GameEndRes from(Game game) {
         return new GameEndRes(
                 game.getGameId(),
                 game.getRoomId(),
                 game.getStatus(),
-                game.getScores()
+                game.getTotalScores()
         );
     }
 }
