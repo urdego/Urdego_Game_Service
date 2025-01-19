@@ -21,13 +21,17 @@ public class RoundSocketController {
     @MessageMapping("/round/question")
     public void giveQuestion(QuestionReq request) {
         QuestionRes response = roundService.getQuestion(request);
-        messagingTemplate.convertAndSend("game-service/sub/" + response.questionId(), response);
+        messagingTemplate.convertAndSend("game-service/sub/" + response.roomId(), response);
     }
 
     // 플레이어 정답 제출
     @MessageMapping("/round/answer")
     public void submitAnswer(AnswerReq request) {
         AnswerRes response = roundService.submitAnswer(request);
+        messagingTemplate.convertAndSend("game-service/sub/");
     }
+
+    // 점수 제공
+
 
 }

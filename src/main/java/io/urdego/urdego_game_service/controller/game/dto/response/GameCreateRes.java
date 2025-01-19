@@ -8,6 +8,7 @@ import java.util.Map;
 
 public record GameCreateRes(
         String gameId,
+        String roomId,
         Status status,
         List<String> players,
         List<String> questionIds,
@@ -16,6 +17,7 @@ public record GameCreateRes(
     public static GameCreateRes from(Game game) {
         return new GameCreateRes(
                 game.getGameId(),
+                game.getRoomId(),
                 game.getStatus(),
                 game.getPlayers(),
                 game.getQuestionIds(),

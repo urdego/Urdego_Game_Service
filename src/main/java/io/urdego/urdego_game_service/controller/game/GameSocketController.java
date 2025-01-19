@@ -18,6 +18,6 @@ public class GameSocketController {
     @MessageMapping("/game/end")
     public void endGame(String gameId) {
         GameEndRes response = gameService.finishGame(gameId);
-        messagingTemplate.convertAndSend("/game-service/sub/" + response.gameId(), response);
+        messagingTemplate.convertAndSend("/game-service/sub/" + response.roomId(), response);
     }
 }

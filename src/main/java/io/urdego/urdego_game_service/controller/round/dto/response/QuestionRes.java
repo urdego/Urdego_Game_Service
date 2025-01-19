@@ -6,6 +6,8 @@ import java.util.List;
 
 public record QuestionRes(
         String questionId,
+        String roomId,
+        int roundNum,
         double latitude,
         double longitude,
         String hint,
@@ -14,6 +16,8 @@ public record QuestionRes(
     public static QuestionRes from(Question question) {
         return new QuestionRes(
                 question.getQuestionId(),
+                question.getRoomId(),
+                question.getRoundNum(),
                 question.getLatitude(),
                 question.getLongitude(),
                 question.getHint(),
