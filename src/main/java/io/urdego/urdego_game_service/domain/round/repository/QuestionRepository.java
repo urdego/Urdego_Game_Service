@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface QuestionRepository extends CrudRepository<Question, String> {
-    Optional<Question> findByRoomId(String roomId);
+    Optional<Question> findByRoomIdAndRoundNum(String roomId, int roundNum);
 
     List<Question> findAllByRoomId(String roomId);
 }

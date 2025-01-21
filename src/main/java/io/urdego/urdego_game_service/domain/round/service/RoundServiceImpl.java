@@ -35,7 +35,7 @@ public class RoundServiceImpl implements RoundService {
 
     // 문제 생성
     @Override
-    public Question createQuestion(String roomId) {
+    public Question createQuestion(String roomId, int roundNum) {
         Room room = roomService.findRoomById(roomId);
 
         // 해당 게임의 기존 문제 조회
@@ -72,7 +72,8 @@ public class RoundServiceImpl implements RoundService {
                     .collect(Collectors.toList());
 
             newQuestion = Question.builder()
-                    .questionId(UUID.randomUUID().toString())
+                    .roomId(roomId)
+                    .roundNum(roundNum)
                     .latitude(targetLatitude)
                     .longitude(targetLongitude)
                     .hint(firstContent.hint())
@@ -86,7 +87,7 @@ public class RoundServiceImpl implements RoundService {
     // 문제 출제
     @Override
     public QuestionRes getQuestion(QuestionReq request) {
-        Question question = findQuestionByRoomId(request.roomId());
+        Question question = findQuestionByRoomIdAndRoundNum(request.roomId(), request.roundNum());
         return QuestionRes.from(question);
     }
 
@@ -120,8 +121,9 @@ public class RoundServiceImpl implements RoundService {
     }
 
     // roomId로 문제 정보 조회
-    private Question findQuestionByRoomId(String roomId) {
-        return questionRepository.findByRoomId(roomId)
+    private Question findQuestionByRoomIdAndRoundNum(String roomId, int roundNum) {
+        String questionId = roomId + ":" + roundNum;
+        return questionRepository.findById(questionId)
                 .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
     }
 

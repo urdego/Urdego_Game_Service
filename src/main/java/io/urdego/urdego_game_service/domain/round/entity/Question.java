@@ -22,8 +22,8 @@ public class Question {
     private List<String> contents;
 
     @Builder
-    public Question(String questionId, String roomId, int roundNum, double latitude, double longitude, String hint, List<String> contents) {
-        this.questionId = questionId;
+    public Question(String roomId, int roundNum, double latitude, double longitude, String hint, List<String> contents) {
+        this.questionId = roomId + ":" + roundNum;
         this.roomId = roomId;
         this.roundNum = roundNum;
         this.latitude = latitude;
