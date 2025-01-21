@@ -34,7 +34,7 @@ public class RoomServiceImpl implements RoomService {
         currentPlayers.add(request.userId());
 
         String roomName = (request.roomName() == null || request.roomName().isBlank())
-                ? request.roomName() : "어데고 게임방";
+                ? "어데고 게임방" : request.roomName();
 
         Room room = Room.builder()
                 .roomId(UUID.randomUUID().toString())
@@ -55,19 +55,13 @@ public class RoomServiceImpl implements RoomService {
     // 대기방 리스트 조회
     @Override
     public List<RoomInfoRes> getRoomList() {
+        Iterable<Room> rooms = roomRepository.findAll();
         List<RoomInfoRes> roomList = new ArrayList<>();
 
-        Set<String> keys = redisTemplate.keys("room:*");
-        if (keys.isEmpty()) {
-            return roomList;
-        }
-
-        for (String key : keys) {
-            Map<Object, Object> roomData = redisTemplate.opsForHash().entries(key);
-
-            Room room = parsingRoomData(key, roomData);
-
-            roomList.add(RoomInfoRes.from(room));
+        for (Room room : rooms) {
+            if (room != null) {
+                roomList.add(RoomInfoRes.from(room));
+            }
         }
 
         return roomList;
@@ -137,17 +131,6 @@ public class RoomServiceImpl implements RoomService {
         }
 
         return room;
-    }
-
-    // 방 정보 Map으로 묶기
-    private Room parsingRoomData(String key, Map<Object, Object> roomData) {
-        return Room.builder()
-                .roomId(key.replace("room:", ""))
-                .status(Status.valueOf(roomData.getOrDefault("status", "UNKNOWN").toString()))
-                .maxPlayers(Integer.parseInt(roomData.getOrDefault("maxPlayers", "0").toString()))
-                .currentPlayers((List<String>) roomData.getOrDefault("currentPlayers", new ArrayList<>()))
-                .totalRounds(Integer.parseInt(roomData.getOrDefault("totalRounds", "0").toString()))
-                .build();
     }
 
 }
