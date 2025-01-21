@@ -2,7 +2,7 @@ package io.urdego.urdego_game_service.controller.room;
 
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -19,7 +19,7 @@ public class RoomSocketController {
     // 친구 초대
     @MessageMapping("/room/player/invite")
     public void invitePlayer(PlayerReq request) {
-        RoomInfoRes response = roomService.joinRoom(request);
+        PlayerRes response = roomService.joinRoom(request);
         messagingTemplate.convertAndSend("/game-service/sub/" + response.roomId(), response);
     }
 
@@ -32,7 +32,7 @@ public class RoomSocketController {
     // 플레이어 삭제
     @MessageMapping("/room/player/remove")
     public void removePlayer(PlayerReq request) {
-        RoomInfoRes response = roomService.removePlayer(request);
+        PlayerRes response = roomService.removePlayer(request);
         messagingTemplate.convertAndSend("/game-service/sub/" + response.roomId(), response);
     }
 }

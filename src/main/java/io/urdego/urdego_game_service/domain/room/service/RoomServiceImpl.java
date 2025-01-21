@@ -3,6 +3,7 @@ package io.urdego.urdego_game_service.domain.room.service;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
@@ -11,13 +12,11 @@ import io.urdego.urdego_game_service.common.exception.room.RoomException;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Service
 @Transactional
@@ -25,6 +24,8 @@ import java.util.UUID;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final RedisTemplate<String, Object> redisTemplate;
+
 
     // 대기방 생성
     @Override
@@ -32,8 +33,12 @@ public class RoomServiceImpl implements RoomService {
         List<String> currentPlayers = new ArrayList<>();
         currentPlayers.add(request.userId());
 
+        String roomName = (request.roomName() == null || request.roomName().isBlank())
+                ? request.roomName() : "어데고 게임방";
+
         Room room = Room.builder()
                 .roomId(UUID.randomUUID().toString())
+                .roomName(roomName)
                 .status(Status.WAITING)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
@@ -47,9 +52,30 @@ public class RoomServiceImpl implements RoomService {
         return RoomCreateRes.from(room);
     }
 
+    // 대기방 리스트 조회
+    @Override
+    public List<RoomInfoRes> getRoomList() {
+        List<RoomInfoRes> roomList = new ArrayList<>();
+
+        Set<String> keys = redisTemplate.keys("room:*");
+        if (keys.isEmpty()) {
+            return roomList;
+        }
+
+        for (String key : keys) {
+            Map<Object, Object> roomData = redisTemplate.opsForHash().entries(key);
+
+            Room room = parsingRoomData(key, roomData);
+
+            roomList.add(RoomInfoRes.from(room));
+        }
+
+        return roomList;
+    }
+
     // 대기방 참여
     @Override
-    public RoomInfoRes joinRoom(PlayerReq request) {
+    public PlayerRes joinRoom(PlayerReq request) {
         Room room = findRoomById(request.roomId());
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
@@ -58,7 +84,7 @@ public class RoomServiceImpl implements RoomService {
 
         roomRepository.save(room);
 
-        return RoomInfoRes.from(room);
+        return PlayerRes.from(room);
     }
 
     // 컨텐츠 등록
@@ -75,7 +101,7 @@ public class RoomServiceImpl implements RoomService {
 
     // 플레이어 삭제
     @Override
-    public RoomInfoRes removePlayer(PlayerReq request) {
+    public PlayerRes removePlayer(PlayerReq request) {
         Room room = findRoomById(request.roomId());
 
         if (!room.getCurrentPlayers().contains(request.userId().toString())) {
@@ -87,7 +113,7 @@ public class RoomServiceImpl implements RoomService {
 
         roomRepository.save(room);
 
-        return RoomInfoRes.from(room);
+        return PlayerRes.from(room);
     }
 
     // 대기방 상태 변경
@@ -111,6 +137,17 @@ public class RoomServiceImpl implements RoomService {
         }
 
         return room;
+    }
+
+    // 방 정보 Map으로 묶기
+    private Room parsingRoomData(String key, Map<Object, Object> roomData) {
+        return Room.builder()
+                .roomId(key.replace("room:", ""))
+                .status(Status.valueOf(roomData.getOrDefault("status", "UNKNOWN").toString()))
+                .maxPlayers(Integer.parseInt(roomData.getOrDefault("maxPlayers", "0").toString()))
+                .currentPlayers((List<String>) roomData.getOrDefault("currentPlayers", new ArrayList<>()))
+                .totalRounds(Integer.parseInt(roomData.getOrDefault("totalRounds", "0").toString()))
+                .build();
     }
 
 }
