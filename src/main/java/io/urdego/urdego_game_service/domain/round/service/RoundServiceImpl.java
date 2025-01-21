@@ -50,7 +50,7 @@ public class RoundServiceImpl implements RoundService {
         if (allContents.size() < 3) {
             int needed = 3 - allContents.size();
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
-            serviceContents.forEach(content -> allContents.add(content.contentId()));
+            serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
         }
 
         Collections.shuffle(allContents);
@@ -58,14 +58,14 @@ public class RoundServiceImpl implements RoundService {
 
         do {
             // 첫 번째 컨텐츠 기준으로 정답 설정
-            ContentRes firstContent = contentServiceClient.getContent(allContents.get(0));
+            ContentRes firstContent = contentServiceClient.getContent(Long.valueOf(allContents.get(0)));
             double targetLatitude = firstContent.latitude();
             double targetLongitude = firstContent.longitude();
 
             // 동일한 위치를 가진 컨텐츠들로 필터링
             List<String> selectedContents = allContents.stream()
                     .filter(contentId -> {
-                        ContentRes content = contentServiceClient.getContent(contentId);
+                        ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
                         return content.latitude() == targetLatitude && content.longitude() == targetLongitude;
                     })
                     .limit(3)

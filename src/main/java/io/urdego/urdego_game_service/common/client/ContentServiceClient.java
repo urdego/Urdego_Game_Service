@@ -9,12 +9,9 @@ import java.util.List;
 
 @FeignClient(name = "content-service")
 public interface ContentServiceClient {
-    @GetMapping("/random")
-    List<ContentRes> getRandomContents(@RequestParam List<String> players);
+    @GetMapping("/api/content-service/content")
+    ContentRes getContent(@RequestParam Long contentId);
 
-    @GetMapping("/content")
-    ContentRes getContent(@RequestParam String contentId);
-
-    @GetMapping("/urdego-content")
+    @GetMapping("/api/content-service/urdego-content")
     List<ContentRes> getUrdegoContents(@RequestParam int counts);
 }
