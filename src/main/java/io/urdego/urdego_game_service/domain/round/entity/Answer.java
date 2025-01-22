@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.index.Indexed;
 
 @Getter
 @RedisHash(value = "answer", timeToLive = 3600)
@@ -14,7 +15,10 @@ public class Answer {
 
     @Id
     private String answerId;
+
+    @Indexed
     private String questionId;
+
     private String userId;
     private double latitude;
     private double longitude;

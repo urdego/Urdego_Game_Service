@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface AnswerRepository extends CrudRepository<Answer, String> {
-    List<Answer> findByQuestionId(String questionId);
+    List<Answer> findAllByQuestionId(String questionId);
 }
