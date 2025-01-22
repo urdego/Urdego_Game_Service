@@ -8,7 +8,7 @@ import java.util.List;
 
 @Getter
 @Setter
-@RedisHash(value = "question", timeToLive = 3600)
+@RedisHash(value = "question", timeToLive = 36000)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Question {
 

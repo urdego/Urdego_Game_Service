@@ -11,7 +11,7 @@ import java.util.Map;
 
 @Getter
 @Setter
-@RedisHash(value = "game", timeToLive = 3600)
+@RedisHash(value = "game", timeToLive = 36000)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Game {
 
