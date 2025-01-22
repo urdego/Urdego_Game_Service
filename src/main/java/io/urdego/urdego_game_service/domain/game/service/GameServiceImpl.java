@@ -16,12 +16,14 @@ import io.urdego.urdego_game_service.domain.round.entity.Answer;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
@@ -76,6 +78,8 @@ public class GameServiceImpl implements GameService {
 
         gameRepository.save(game);
 
+        log.info("게임 점수 정보 : roundScores={}, totalScores={}", game.getRoundScores(), game.getTotalScores());
+
         return ScoreRes.from(game);
     }
 
@@ -119,6 +123,8 @@ public class GameServiceImpl implements GameService {
             game.setTotalScores(new HashMap<>());
         }
 
+        gameRepository.save(game);
+
         return game;
     }
 
@@ -126,16 +132,21 @@ public class GameServiceImpl implements GameService {
     private void updateRoundScores(Game game, int roundNum, List<Answer> answers) {
         Map<Integer, Map<String, Integer>> roundScores = game.getRoundScores();
 
-        if (!roundScores.containsKey(roundNum)) {
-            roundScores.put(roundNum, new HashMap<>());
+        if (roundScores == null) {
+            roundScores = new HashMap<>();
         }
+
+        roundScores.putIfAbsent(roundNum, new HashMap<>());
 
         Map<String, Integer> roundScore = roundScores.get(roundNum);
         for (Answer answer : answers) {
+            log.info("Answer: userId={}, score={}", answer.getUserId(), answer.getScore());
             roundScore.put(answer.getUserId(), answer.getScore());
         }
 
         game.setRoundScores(roundScores);
+
+        log.info("{}라운드 점수가 업데이트 되었습니다. : {}", roundNum, game.getRoundScores());
     }
 
     // 전체 점수 업뎃
@@ -149,5 +160,7 @@ public class GameServiceImpl implements GameService {
         });
 
         game.setTotalScores(totalScores);
+
+        log.info("전체 점수가 업데이트 되었습니다. : {}", game.getTotalScores());
     }
 }
