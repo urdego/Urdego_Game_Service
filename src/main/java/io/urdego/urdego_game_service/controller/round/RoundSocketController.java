@@ -21,7 +21,7 @@ public class RoundSocketController {
     @MessageMapping("/round/question")
     public void giveQuestion(QuestionReq request) {
         QuestionRes response = roundService.getQuestion(request);
-        messagingTemplate.convertAndSend("game-service/sub/" + response.roomId(), response);
+        messagingTemplate.convertAndSend("/game-service/sub/" + response.roomId(), response);
     }
 
     // 플레이어 정답 제출

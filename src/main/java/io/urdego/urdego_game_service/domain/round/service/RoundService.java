@@ -11,7 +11,7 @@ import java.util.List;
 
 public interface RoundService {
     // 문제 생성
-    Question createQuestion(String roomId);
+    Question createQuestion(String roomId, int roundNum);
 
     // 문제 출제
     QuestionRes getQuestion(QuestionReq request);

@@ -54,7 +54,7 @@ public class GameServiceImpl implements GameService {
 
         // Question 생성
         for (int roundNum = 1; roundNum <= room.getTotalRounds(); roundNum++) {
-            Question question = roundService.createQuestion(game.getRoomId());
+            Question question = roundService.createQuestion(game.getRoomId(), roundNum);
             game.getQuestionIds().add(question.getQuestionId());
         }
 
@@ -109,8 +109,17 @@ public class GameServiceImpl implements GameService {
     @Transactional(readOnly = true)
     @Override
     public Game findGameById(String gameId) {
-        return gameRepository.findById(gameId)
+        Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameException(ExceptionMessage.GAME_NOT_FOUND));
+
+        if (game.getRoundScores() == null) {
+            game.setRoundScores(new HashMap<>());
+        }
+        if (game.getTotalScores() == null) {
+            game.setTotalScores(new HashMap<>());
+        }
+
+        return game;
     }
 
     // 라운드 점수 업뎃

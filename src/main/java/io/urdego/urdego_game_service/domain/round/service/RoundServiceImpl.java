@@ -35,7 +35,7 @@ public class RoundServiceImpl implements RoundService {
 
     // 문제 생성
     @Override
-    public Question createQuestion(String roomId) {
+    public Question createQuestion(String roomId, int roundNum) {
         Room room = roomService.findRoomById(roomId);
 
         // 해당 게임의 기존 문제 조회
@@ -50,7 +50,7 @@ public class RoundServiceImpl implements RoundService {
         if (allContents.size() < 3) {
             int needed = 3 - allContents.size();
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
-            serviceContents.forEach(content -> allContents.add(content.contentId()));
+            serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
         }
 
         Collections.shuffle(allContents);
@@ -58,21 +58,22 @@ public class RoundServiceImpl implements RoundService {
 
         do {
             // 첫 번째 컨텐츠 기준으로 정답 설정
-            ContentRes firstContent = contentServiceClient.getContent(allContents.get(0));
+            ContentRes firstContent = contentServiceClient.getContent(Long.valueOf(allContents.get(0)));
             double targetLatitude = firstContent.latitude();
             double targetLongitude = firstContent.longitude();
 
             // 동일한 위치를 가진 컨텐츠들로 필터링
             List<String> selectedContents = allContents.stream()
                     .filter(contentId -> {
-                        ContentRes content = contentServiceClient.getContent(contentId);
+                        ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
                         return content.latitude() == targetLatitude && content.longitude() == targetLongitude;
                     })
                     .limit(3)
                     .collect(Collectors.toList());
 
             newQuestion = Question.builder()
-                    .questionId(UUID.randomUUID().toString())
+                    .roomId(roomId)
+                    .roundNum(roundNum)
                     .latitude(targetLatitude)
                     .longitude(targetLongitude)
                     .hint(firstContent.hint())
@@ -86,7 +87,7 @@ public class RoundServiceImpl implements RoundService {
     // 문제 출제
     @Override
     public QuestionRes getQuestion(QuestionReq request) {
-        Question question = findQuestionByRoomId(request.roomId());
+        Question question = findQuestionByRoomIdAndRoundNum(request.roomId(), request.roundNum());
         return QuestionRes.from(question);
     }
 
@@ -120,8 +121,9 @@ public class RoundServiceImpl implements RoundService {
     }
 
     // roomId로 문제 정보 조회
-    private Question findQuestionByRoomId(String roomId) {
-        return questionRepository.findByRoomId(roomId)
+    private Question findQuestionByRoomIdAndRoundNum(String roomId, int roundNum) {
+        String questionId = roomId + ":" + roundNum;
+        return questionRepository.findById(questionId)
                 .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
     }
 

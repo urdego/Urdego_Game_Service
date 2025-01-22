@@ -16,6 +16,7 @@ public class Room {
 
     @Id
     private String roomId;
+    private String roomName;
     private Status status;
     private int maxPlayers;
     private int totalRounds;
@@ -25,8 +26,9 @@ public class Room {
     // private String gameType;
 
     @Builder
-    public Room(String roomId, Status status, int maxPlayers, int totalRounds, int timer, List<String> currentPlayers, Map<String, List<String>> playerContents) {
+    public Room(String roomId, String roomName, Status status, int maxPlayers, int totalRounds, int timer, List<String> currentPlayers, Map<String, List<String>> playerContents) {
         this.roomId = roomId;
+        this.roomName = roomName;
         this.status = status;
         this.maxPlayers = maxPlayers;
         this.totalRounds = totalRounds;
