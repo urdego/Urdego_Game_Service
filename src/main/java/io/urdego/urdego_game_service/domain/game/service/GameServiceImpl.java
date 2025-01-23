@@ -56,11 +56,13 @@ public class GameServiceImpl implements GameService {
 
         // Question 생성
         for (int roundNum = 1; roundNum <= room.getTotalRounds(); roundNum++) {
+            log.info("{}라운드 문제 생성 중...", roundNum);
             Question question = roundService.createQuestion(game.getRoomId(), roundNum);
             game.getQuestionIds().add(question.getQuestionId());
         }
 
         gameRepository.save(game);
+        log.info("게임 생성 | gameId: {}, roomId: {}", game.getGameId(), game.getRoomId());
 
         return GameCreateRes.from(game);
     }
@@ -73,12 +75,15 @@ public class GameServiceImpl implements GameService {
         String questionId = game.getQuestionIds().get(request.roundNum() - 1);
         List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
 
+        if (answers.isEmpty()) {
+            log.warn("점수 계산 실패 | gameId: {}, roundNum: {} | 정답 데이터가 없습니다.", request.gameId(), request.roundNum());
+        }
+
         updateRoundScores(game, request.roundNum(), answers);
         updateTotalScores(game);
 
         gameRepository.save(game);
-
-        log.info("게임 점수 정보 : roundScores={}, totalScores={}", game.getRoundScores(), game.getTotalScores());
+        log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
 
         return ScoreRes.from(game);
     }
@@ -92,27 +97,16 @@ public class GameServiceImpl implements GameService {
             throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED);
         }
 
-        game.setStatus(Status.COMPLETED);
         game.setEndedAt(Instant.now());
+        log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        gameRepository.save(game);
+        updateGameStatusById(gameId, Status.COMPLETED);
 
         return GameEndRes.from(game);
     }
 
-    // 게임 상태 변경
-    @Override
-    public Game updateGameStatusById(String gameId, Status status) {
-        Game game = findGameById(gameId);
-        game.setStatus(status);
-
-        return gameRepository.save(game);
-    }
-
     // 게임 정보 조회
-    @Transactional(readOnly = true)
-    @Override
-    public Game findGameById(String gameId) {
+    private Game findGameById(String gameId) {
         Game game = gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameException(ExceptionMessage.GAME_NOT_FOUND));
 
@@ -126,6 +120,15 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
 
         return game;
+    }
+
+    // 게임 상태 변경
+    private void updateGameStatusById(String gameId, Status status) {
+        Game game = findGameById(gameId);
+        game.setStatus(status);
+
+        gameRepository.save(game);
+        log.info("게임 상태 변경 | gameId: {}, Status: {}", game.getGameId(), game.getStatus());
     }
 
     // 라운드 점수 업뎃
@@ -142,6 +145,10 @@ public class GameServiceImpl implements GameService {
         for (Answer answer : answers) {
             log.info("Answer: userId={}, score={}", answer.getUserId(), answer.getScore());
             roundScore.put(answer.getUserId(), answer.getScore());
+        }
+
+        for (String player : game.getPlayers()) {
+            roundScore.putIfAbsent(player, 0);
         }
 
         game.setRoundScores(roundScores);

@@ -12,20 +12,19 @@ import io.urdego.urdego_game_service.common.exception.room.RoomException;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
-
 
     // 대기방 생성
     @Override
@@ -48,6 +47,7 @@ public class RoomServiceImpl implements RoomService {
                 .build();
 
         roomRepository.save(room);
+        log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
         return RoomCreateRes.from(room);
     }
@@ -64,6 +64,8 @@ public class RoomServiceImpl implements RoomService {
             }
         }
 
+        log.info("대기방 조회 | {}개", roomList.size());
+
         return roomList;
     }
 
@@ -77,6 +79,7 @@ public class RoomServiceImpl implements RoomService {
         room.getCurrentPlayers().add(request.userId().toString());
 
         roomRepository.save(room);
+        log.info("대기방 참여 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
         return PlayerRes.from(room);
     }
@@ -106,6 +109,7 @@ public class RoomServiceImpl implements RoomService {
         room.getPlayerContents().remove(request.userId().toString());
 
         roomRepository.save(room);
+        log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
         return PlayerRes.from(room);
     }
@@ -116,7 +120,10 @@ public class RoomServiceImpl implements RoomService {
         Room room = findRoomById(roomId);
         room.setStatus(status);
 
-        return roomRepository.save(room);
+        roomRepository.save(room);
+        log.info("대기방 상태 변경 | roomId: {}, Status: {}", room.getRoomId(), room.getStatus());
+
+        return room;
     }
 
     // 방 정보 조회
@@ -132,5 +139,4 @@ public class RoomServiceImpl implements RoomService {
 
         return room;
     }
-
 }
