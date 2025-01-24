@@ -101,8 +101,10 @@ public class GameServiceImpl implements GameService {
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
         updateGameStatusById(gameId, Status.COMPLETED);
+        Map<String, Integer> exp = calculateExp(game.getTotalScores());
+        log.info("경험치 계산 결과: {}", exp);
 
-        return GameEndRes.from(game);
+        return GameEndRes.of(game, exp);
     }
 
     // 게임 정보 조회
@@ -169,5 +171,16 @@ public class GameServiceImpl implements GameService {
         game.setTotalScores(totalScores);
 
         log.info("전체 점수가 업데이트 되었습니다. : {}", game.getTotalScores());
+    }
+
+    // 경험치 계산 (점수의 0.1%)
+    private Map<String, Integer> calculateExp(Map<String, Integer> totalScores) {
+        Map<String, Integer> expMap = new HashMap<>();
+        totalScores.forEach((userId, score) -> {
+            int exp = (int) Math.ceil(score * 0.001);
+            expMap.put(userId, exp);
+        });
+
+        return expMap;
     }
 }
