@@ -41,7 +41,6 @@ public class RoomServiceImpl implements RoomService {
                 .status(Status.WAITING)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
-                .timer(request.timer())
                 .currentPlayers(currentPlayers)
                 .playerContents(new HashMap<>())
                 .build();

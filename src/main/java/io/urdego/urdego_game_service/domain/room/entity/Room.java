@@ -20,19 +20,17 @@ public class Room {
     private Status status;
     private int maxPlayers;
     private int totalRounds;
-    private int timer;
     private List<String> currentPlayers;
     private Map<String, List<String>> playerContents;
     // private String gameType;
 
     @Builder
-    public Room(String roomId, String roomName, Status status, int maxPlayers, int totalRounds, int timer, List<String> currentPlayers, Map<String, List<String>> playerContents) {
+    public Room(String roomId, String roomName, Status status, int maxPlayers, int totalRounds, List<String> currentPlayers, Map<String, List<String>> playerContents) {
         this.roomId = roomId;
         this.roomName = roomName;
         this.status = status;
         this.maxPlayers = maxPlayers;
         this.totalRounds = totalRounds;
-        this.timer = timer;
         this.currentPlayers = currentPlayers;
         this.playerContents = playerContents;
     }
