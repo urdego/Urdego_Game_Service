@@ -4,8 +4,8 @@ import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
 import io.urdego.urdego_game_service.controller.round.dto.response.AnswerRes;
 import io.urdego.urdego_game_service.controller.round.dto.response.QuestionRes;
-import io.urdego.urdego_game_service.common.client.ContentServiceClient;
-import io.urdego.urdego_game_service.common.client.dto.ContentRes;
+import io.urdego.urdego_game_service.common.client.content.ContentServiceClient;
+import io.urdego.urdego_game_service.common.client.content.dto.ContentRes;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.round.QuestionException;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
@@ -49,6 +49,7 @@ public class RoundServiceImpl implements RoundService {
         // 총 3개 이상의 컨텐츠가 준비되지 않았으면?
         if (allContents.size() < 3) {
             int needed = 3 - allContents.size();
+            log.info("사용자 제공 컨텐츠 부족 | 필요 추가 컨텐츠: {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
             serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
         }
@@ -81,6 +82,8 @@ public class RoundServiceImpl implements RoundService {
                     .build();
         } while (isDuplicateQuestion(newQuestion, existingQuestions));
 
+        log.info("문제 생성 | roomId: {}, roundNum: {}", roomId, roundNum);
+
         return questionRepository.save(newQuestion);
     }
 
@@ -88,6 +91,8 @@ public class RoundServiceImpl implements RoundService {
     @Override
     public QuestionRes getQuestion(QuestionReq request) {
         Question question = findQuestionByRoomIdAndRoundNum(request.roomId(), request.roundNum());
+        log.info("문제 출제 | roomId: {}, roundNum: {}", request.roomId(), request.roundNum());
+
         return QuestionRes.from(question);
     }
 
@@ -109,6 +114,7 @@ public class RoundServiceImpl implements RoundService {
                 .build();
 
         answerRepository.save(answer);
+        log.info("정답 저장 완료 | userId: {}, questionId: {}", answer.getUserId(), answer.getQuestionId());
 
         return AnswerRes.from(answer);
     }
@@ -150,7 +156,10 @@ public class RoundServiceImpl implements RoundService {
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        return EARTH_RADIUS * c;
+        double distance = EARTH_RADIUS * c;
+
+        log.info("거리 계산 | distance: {}", distance);
+        return distance;
     }
 
     // 점수 계산
@@ -162,6 +171,9 @@ public class RoundServiceImpl implements RoundService {
             return 0;
         }
 
-        return (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
+        int score = (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
+
+        log.info("점수 계산 | score: {}", score);
+        return score;
     }
 }

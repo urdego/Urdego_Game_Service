@@ -3,7 +3,7 @@ package io.urdego.urdego_game_service.domain.room.service;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
@@ -20,14 +20,17 @@ public interface RoomService {
     // 대기방 리스트 조회
     List<RoomInfoRes> getRoomList();
 
-    // 방 참가
-    PlayerRes joinRoom(PlayerReq request);
+    // 플레이어 참여
+    RoomPlayersRes joinRoom(PlayerReq request);
+
+    // 플레이어 삭제
+    RoomPlayersRes removePlayer(PlayerReq request);
+
+    // 플레이어 준비
+    RoomPlayersRes readyPlayer(PlayerReq request);
 
     // 컨텐츠 등록
     void registerContents(ContentSelectReq request);
-
-    // 플레이어 삭제
-    PlayerRes removePlayer(PlayerReq request);
 
     // 방 상태 변경
     Room updateRoomStatusById(String roomId, Status status);

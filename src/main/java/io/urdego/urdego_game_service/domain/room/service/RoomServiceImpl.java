@@ -3,7 +3,7 @@ package io.urdego.urdego_game_service.domain.room.service;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
@@ -12,20 +12,19 @@ import io.urdego.urdego_game_service.common.exception.room.RoomException;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.RedisTemplate;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 
+@Slf4j
 @Service
 @Transactional
 @RequiredArgsConstructor
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
-    private final RedisTemplate<String, Object> redisTemplate;
-
 
     // 대기방 생성
     @Override
@@ -42,12 +41,12 @@ public class RoomServiceImpl implements RoomService {
                 .status(Status.WAITING)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
-                .timer(request.timer())
                 .currentPlayers(currentPlayers)
                 .playerContents(new HashMap<>())
                 .build();
 
         roomRepository.save(room);
+        log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
         return RoomCreateRes.from(room);
     }
@@ -64,21 +63,57 @@ public class RoomServiceImpl implements RoomService {
             }
         }
 
+        log.info("대기방 조회 | {}개", roomList.size());
+
         return roomList;
     }
 
-    // 대기방 참여
+    // 플레이어 참여
     @Override
-    public PlayerRes joinRoom(PlayerReq request) {
+    public RoomPlayersRes joinRoom(PlayerReq request) {
         Room room = findRoomById(request.roomId());
+        String user = request.userId().toString();
+
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
-        room.getCurrentPlayers().add(request.userId().toString());
+        room.getCurrentPlayers().add(user);
+        room.getReadyStatus().put(user, false);
 
         roomRepository.save(room);
+        log.info("대기방 참여 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return PlayerRes.from(room);
+        return RoomPlayersRes.from(room);
+    }
+
+    // 플레이어 삭제
+    @Override
+    public RoomPlayersRes removePlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+        String user = request.userId().toString();
+
+        if (!room.getCurrentPlayers().contains(user)) {
+            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
+        }
+        room.getCurrentPlayers().remove(user);
+        room.getPlayerContents().remove(user);
+        room.getReadyStatus().remove(user);
+
+        roomRepository.save(room);
+        log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
+
+        return RoomPlayersRes.from(room);
+    }
+
+    // 플레이어 준비
+    @Override
+    public RoomPlayersRes readyPlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+
+        room.getReadyStatus().put(request.userId().toString(), request.isReady());
+        roomRepository.save(room);
+
+        return RoomPlayersRes.from(room);
     }
 
     // 컨텐츠 등록
@@ -93,30 +128,16 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
     }
 
-    // 플레이어 삭제
-    @Override
-    public PlayerRes removePlayer(PlayerReq request) {
-        Room room = findRoomById(request.roomId());
-
-        if (!room.getCurrentPlayers().contains(request.userId().toString())) {
-            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
-        }
-
-        room.getCurrentPlayers().remove(request.userId().toString());
-        room.getPlayerContents().remove(request.userId().toString());
-
-        roomRepository.save(room);
-
-        return PlayerRes.from(room);
-    }
-
     // 대기방 상태 변경
     @Override
     public Room updateRoomStatusById(String roomId, Status status) {
         Room room = findRoomById(roomId);
         room.setStatus(status);
 
-        return roomRepository.save(room);
+        roomRepository.save(room);
+        log.info("대기방 상태 변경 | roomId: {}, Status: {}", room.getRoomId(), room.getStatus());
+
+        return room;
     }
 
     // 방 정보 조회
@@ -132,5 +153,4 @@ public class RoomServiceImpl implements RoomService {
 
         return room;
     }
-
 }

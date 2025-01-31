@@ -4,7 +4,6 @@ public record RoomCreateReq(
         String userId,
         String roomName,
         int maxPlayers,
-        int totalRounds,
-        int timer
+        int totalRounds
 ) {
 }
