@@ -3,7 +3,7 @@ package io.urdego.urdego_game_service.domain.room.service;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
@@ -68,19 +68,52 @@ public class RoomServiceImpl implements RoomService {
         return roomList;
     }
 
-    // 대기방 참여
+    // 플레이어 참여
     @Override
-    public PlayerRes joinRoom(PlayerReq request) {
+    public RoomPlayersRes joinRoom(PlayerReq request) {
         Room room = findRoomById(request.roomId());
+        String user = request.userId().toString();
+
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
-        room.getCurrentPlayers().add(request.userId().toString());
+        room.getCurrentPlayers().add(user);
+        room.getReadyStatus().put(user, false);
 
         roomRepository.save(room);
         log.info("대기방 참여 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return PlayerRes.from(room);
+        return RoomPlayersRes.from(room);
+    }
+
+    // 플레이어 삭제
+    @Override
+    public RoomPlayersRes removePlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+        String user = request.userId().toString();
+
+        if (!room.getCurrentPlayers().contains(user)) {
+            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
+        }
+        room.getCurrentPlayers().remove(user);
+        room.getPlayerContents().remove(user);
+        room.getReadyStatus().remove(user);
+
+        roomRepository.save(room);
+        log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
+
+        return RoomPlayersRes.from(room);
+    }
+
+    // 플레이어 준비
+    @Override
+    public RoomPlayersRes readyPlayer(PlayerReq request) {
+        Room room = findRoomById(request.roomId());
+
+        room.getReadyStatus().put(request.userId().toString(), request.isReady());
+        roomRepository.save(room);
+
+        return RoomPlayersRes.from(room);
     }
 
     // 컨텐츠 등록
@@ -93,24 +126,6 @@ public class RoomServiceImpl implements RoomService {
 
         room.getPlayerContents().put(request.userId().toString(), request.contentIds());
         roomRepository.save(room);
-    }
-
-    // 플레이어 삭제
-    @Override
-    public PlayerRes removePlayer(PlayerReq request) {
-        Room room = findRoomById(request.roomId());
-
-        if (!room.getCurrentPlayers().contains(request.userId().toString())) {
-            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
-        }
-
-        room.getCurrentPlayers().remove(request.userId().toString());
-        room.getPlayerContents().remove(request.userId().toString());
-
-        roomRepository.save(room);
-        log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
-
-        return PlayerRes.from(room);
     }
 
     // 대기방 상태 변경

@@ -5,7 +5,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
@@ -42,16 +42,16 @@ public class RoomController {
     @Tag(name = "대기방 Socket")
     @Operation(summary = "플레이어 초대", description = "대기방에 플레이어 참여")
     @PostMapping("/player/invite")
-    public ResponseEntity<PlayerRes> invitePlayer(@RequestBody PlayerReq request) {
-        PlayerRes response = roomService.joinRoom(request);
+    public ResponseEntity<RoomPlayersRes> invitePlayer(@RequestBody PlayerReq request) {
+        RoomPlayersRes response = roomService.joinRoom(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @Tag(name = "대기방 Socket")
     @Operation(summary = "플레이어 삭제", description = "대기방에 플레이어 삭제")
     @PostMapping("/player/remove")
-    public ResponseEntity<PlayerRes> removePlayer(@RequestBody PlayerReq request) {
-        PlayerRes response = roomService.removePlayer(request);
+    public ResponseEntity<RoomPlayersRes> removePlayer(@RequestBody PlayerReq request) {
+        RoomPlayersRes response = roomService.removePlayer(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

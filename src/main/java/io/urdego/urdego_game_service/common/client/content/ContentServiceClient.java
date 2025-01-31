@@ -1,6 +1,6 @@
-package io.urdego.urdego_game_service.common.client;
+package io.urdego.urdego_game_service.common.client.content;
 
-import io.urdego.urdego_game_service.common.client.dto.ContentRes;
+import io.urdego.urdego_game_service.common.client.content.dto.ContentRes;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;

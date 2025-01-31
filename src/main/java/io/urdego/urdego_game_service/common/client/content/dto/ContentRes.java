@@ -1,4 +1,4 @@
-package io.urdego.urdego_game_service.common.client.dto;
+package io.urdego.urdego_game_service.common.client.content.dto;
 
 public record ContentRes(
         Long contentId,

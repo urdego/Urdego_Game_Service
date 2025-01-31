@@ -1,8 +1,5 @@
 package io.urdego.urdego_game_service.controller.room;
 
-import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
-import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
