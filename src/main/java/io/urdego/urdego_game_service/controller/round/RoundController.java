@@ -21,7 +21,7 @@ public class RoundController {
 
     private final RoundService roundService;
 
-    @Tag(name = "게임 라운드 Socket")
+    @Tag(name = "백엔드 API")
     @Operation(summary = "문제 출제", description = "라운드 시작")
     @PostMapping("/question")
     public ResponseEntity<QuestionRes> giveQuestion(@RequestBody QuestionReq request) {
@@ -29,7 +29,7 @@ public class RoundController {
         return ResponseEntity.ok(response);
     }
 
-    @Tag(name = "게임 라운드 Socket")
+    @Tag(name = "백엔드 API")
     @Operation(summary = "답안 제출", description = "사용자별 답안 제출")
     @PostMapping("/answer")
     public ResponseEntity<AnswerRes> submitAnswer(@RequestBody AnswerReq request) {

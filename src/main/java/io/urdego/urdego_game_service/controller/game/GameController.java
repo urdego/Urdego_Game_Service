@@ -31,7 +31,7 @@ public class GameController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @Tag(name = "게임 Socket")
+    @Tag(name = "백엔드 API")
     @Operation(summary = "게임 점수", description = "게임 점수 조회")
     @PostMapping("/score")
     public ResponseEntity<ScoreRes> giveScores(@RequestBody ScoreReq request) {
@@ -39,7 +39,7 @@ public class GameController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @Tag(name = "게임 Socket")
+    @Tag(name = "백엔드 API")
     @Operation(summary = "게임 종료", description = "게임 종료")
     @PostMapping("/end")
     public ResponseEntity<GameEndRes> endGame(@RequestBody String gameId) {

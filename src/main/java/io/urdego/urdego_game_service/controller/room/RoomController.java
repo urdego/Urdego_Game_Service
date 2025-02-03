@@ -39,23 +39,31 @@ public class RoomController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @Tag(name = "대기방 Socket")
-    @Operation(summary = "플레이어 초대", description = "대기방에 플레이어 참여")
+    @Tag(name = "백엔드 API")
+    @Operation(summary = "플레이어 초대", description = "대기방 플레이어 참여")
     @PostMapping("/player/invite")
     public ResponseEntity<RoomPlayersRes> invitePlayer(@RequestBody PlayerReq request) {
         RoomPlayersRes response = roomService.joinRoom(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @Tag(name = "대기방 Socket")
-    @Operation(summary = "플레이어 삭제", description = "대기방에 플레이어 삭제")
+    @Tag(name = "백엔드 API")
+    @Operation(summary = "플레이어 삭제", description = "대기방 플레이어 삭제")
     @PostMapping("/player/remove")
     public ResponseEntity<RoomPlayersRes> removePlayer(@RequestBody PlayerReq request) {
         RoomPlayersRes response = roomService.removePlayer(request);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @Tag(name = "대기방 Socket")
+    @Tag(name = "백엔드 API")
+    @Operation(summary = "플레이어 준비", description = "대기방 플레이어 준비 상태 관리")
+    @PostMapping("/player/ready")
+    public ResponseEntity<RoomPlayersRes> readyPlayer(@RequestBody PlayerReq request) {
+        RoomPlayersRes response = roomService.readyPlayer(request);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @Tag(name = "백엔드 API")
     @Operation(summary = "게임 컨텐츠 선택", description = "게임 문제 출제를 위한 컨텐츠 선택")
     @PostMapping("/select-content")
     public ResponseEntity<Void> selectContent(@RequestBody ContentSelectReq request) {
