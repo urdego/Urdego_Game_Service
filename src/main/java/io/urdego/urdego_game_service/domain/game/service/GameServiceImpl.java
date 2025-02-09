@@ -92,15 +92,14 @@ public class GameServiceImpl implements GameService {
     @Override
     public GameEndRes finishGame(String gameId) {
         Game game = findGameById(gameId);
-
         if (game.getStatus() == Status.COMPLETED) {
             throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED);
         }
+        game = updateGameStatusById(gameId, Status.COMPLETED);
 
         game.setEndedAt(Instant.now());
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        updateGameStatusById(gameId, Status.COMPLETED);
         Map<String, Integer> exp = calculateExp(game.getTotalScores());
         log.info("경험치 계산 결과: {}", exp);
 
@@ -125,12 +124,14 @@ public class GameServiceImpl implements GameService {
     }
 
     // 게임 상태 변경
-    private void updateGameStatusById(String gameId, Status status) {
+    private Game updateGameStatusById(String gameId, Status status) {
         Game game = findGameById(gameId);
         game.setStatus(status);
 
-        gameRepository.save(game);
+        Game updatedGame = gameRepository.save(game);
         log.info("게임 상태 변경 | gameId: {}, Status: {}", game.getGameId(), game.getStatus());
+
+        return updatedGame;
     }
 
     // 라운드 점수 업뎃
