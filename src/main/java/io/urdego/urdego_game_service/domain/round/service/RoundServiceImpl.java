@@ -116,7 +116,7 @@ public class RoundServiceImpl implements RoundService {
         answerRepository.save(answer);
         log.info("정답 저장 완료 | userId: {}, questionId: {}", answer.getUserId(), answer.getQuestionId());
 
-        return AnswerRes.from(answer);
+        return AnswerRes.from(question.getRoomId(), answer);
     }
 
     // questionId로 정답 정보 조회

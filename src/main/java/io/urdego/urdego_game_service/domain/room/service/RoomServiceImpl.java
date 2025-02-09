@@ -1,5 +1,7 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
+import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
+import io.urdego.urdego_game_service.controller.client.user.dto.CharacterRes;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
@@ -25,12 +27,14 @@ import java.util.*;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final UserServiceClient userServiceClient;
 
     // 대기방 생성
     @Override
     public RoomCreateRes createRoom(RoomCreateReq request) {
         List<String> currentPlayers = new ArrayList<>();
-        currentPlayers.add(request.userId());
+        String user = request.userId();
+        currentPlayers.add(user);
 
         String roomName = (request.roomName() == null || request.roomName().isBlank())
                 ? "어데고 게임방" : request.roomName();
@@ -39,12 +43,15 @@ public class RoomServiceImpl implements RoomService {
                 .roomId(UUID.randomUUID().toString())
                 .roomName(roomName)
                 .status(Status.WAITING)
+                .hostId(user)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
                 .currentPlayers(currentPlayers)
                 .playerContents(new HashMap<>())
+                .readyStatus(new HashMap<>())
                 .build();
 
+        room.getReadyStatus().put(user, false);
         roomRepository.save(room);
         log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
@@ -59,7 +66,9 @@ public class RoomServiceImpl implements RoomService {
 
         for (Room room : rooms) {
             if (room != null) {
-                roomList.add(RoomInfoRes.from(room));
+                CharacterRes character = userServiceClient.getCharacterInfo(Long.valueOf(room.getHostId()));
+                // TODO user쪽 다음 push때 병렬처리로 바꿔주기 List로 받아오게끔
+                roomList.add(RoomInfoRes.from(room, character));
             }
         }
 
@@ -98,6 +107,17 @@ public class RoomServiceImpl implements RoomService {
         room.getCurrentPlayers().remove(user);
         room.getPlayerContents().remove(user);
         room.getReadyStatus().remove(user);
+
+        if (room.getHostId().equals(user)) {
+            if (!room.getCurrentPlayers().isEmpty()) {
+                room.setHostId(room.getCurrentPlayers().get(0));
+                log.info("방장 변경 | roomId: {}, newHost: {}", room.getRoomId(), room.getHostId());
+            } else {
+                roomRepository.delete(room);
+                log.info("방 삭제됨 | roomId: {}", room.getRoomId());
+                return null;
+            }
+        }
 
         roomRepository.save(room);
         log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());

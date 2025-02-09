@@ -19,17 +19,19 @@ public class Room {
     private String roomId;
     private String roomName;
     private Status status;
+    private String hostId;
     private int maxPlayers;
     private int totalRounds;
     private List<String> currentPlayers;
     private Map<String, List<String>> playerContents;
-    private Map<String, Boolean> readyStatus = new HashMap<>();
+    private Map<String, Boolean> readyStatus;
 
     @Builder
-    public Room(String roomId, String roomName, Status status, int maxPlayers, int totalRounds, List<String> currentPlayers, Map<String, List<String>> playerContents, Map<String, Boolean> readyStatus) {
+    public Room(String roomId, String roomName, Status status, String hostId, int maxPlayers, int totalRounds, List<String> currentPlayers, Map<String, List<String>> playerContents, Map<String, Boolean> readyStatus) {
         this.roomId = roomId;
         this.roomName = roomName;
         this.status = status;
+        this.hostId = hostId;
         this.maxPlayers = maxPlayers;
         this.totalRounds = totalRounds;
         this.currentPlayers = currentPlayers;
