@@ -1,5 +1,8 @@
 package io.urdego.urdego_game_service.domain.game.service;
 
+import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
 import io.urdego.urdego_game_service.controller.game.dto.request.ScoreReq;
 import io.urdego.urdego_game_service.controller.game.dto.response.GameCreateRes;
@@ -11,6 +14,7 @@ import io.urdego.urdego_game_service.controller.game.dto.response.ScoreRes;
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
+import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
@@ -32,6 +36,7 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final RoomService roomService;
     private final RoundService roundService;
+    private final UserServiceClient userServiceClient;
 
     // 게임 생성
     @Override
@@ -85,22 +90,28 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
         log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
 
-        return ScoreRes.from(game);
+        Room room = roomService.findRoomById(game.getRoomId());
+        List<Long> userIds = room.getCurrentPlayers().stream()
+                .map(Long::valueOf)
+                .toList();
+
+        List<UserRes> users = userServiceClient.getUsers(new UserInfoListReq(userIds));
+
+        return ScoreRes.from(game, request.roundNum(), room.getTotalRounds(), users);
     }
 
     // 게임 종료
     @Override
     public GameEndRes finishGame(String gameId) {
         Game game = findGameById(gameId);
-
         if (game.getStatus() == Status.COMPLETED) {
             throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED);
         }
+        game = updateGameStatusById(gameId, Status.COMPLETED);
 
         game.setEndedAt(Instant.now());
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        updateGameStatusById(gameId, Status.COMPLETED);
         Map<String, Integer> exp = calculateExp(game.getTotalScores());
         log.info("경험치 계산 결과: {}", exp);
 
@@ -125,12 +136,14 @@ public class GameServiceImpl implements GameService {
     }
 
     // 게임 상태 변경
-    private void updateGameStatusById(String gameId, Status status) {
+    private Game updateGameStatusById(String gameId, Status status) {
         Game game = findGameById(gameId);
         game.setStatus(status);
 
-        gameRepository.save(game);
+        Game updatedGame = gameRepository.save(game);
         log.info("게임 상태 변경 | gameId: {}, Status: {}", game.getGameId(), game.getStatus());
+
+        return updatedGame;
     }
 
     // 라운드 점수 업뎃
@@ -177,7 +190,7 @@ public class GameServiceImpl implements GameService {
     private Map<String, Integer> calculateExp(Map<String, Integer> totalScores) {
         Map<String, Integer> expMap = new HashMap<>();
         totalScores.forEach((userId, score) -> {
-            int exp = (int) Math.ceil(score * 0.001);
+            int exp = (int) Math.ceil(score * 0.01);
             expMap.put(userId, exp);
         });
 

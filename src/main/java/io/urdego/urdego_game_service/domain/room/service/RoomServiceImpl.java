@@ -1,8 +1,12 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
+import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
@@ -17,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -25,12 +30,14 @@ import java.util.*;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
+    private final UserServiceClient userServiceClient;
 
     // 대기방 생성
     @Override
     public RoomCreateRes createRoom(RoomCreateReq request) {
         List<String> currentPlayers = new ArrayList<>();
-        currentPlayers.add(request.userId());
+        String user = request.userId();
+        currentPlayers.add(user);
 
         String roomName = (request.roomName() == null || request.roomName().isBlank())
                 ? "어데고 게임방" : request.roomName();
@@ -39,12 +46,15 @@ public class RoomServiceImpl implements RoomService {
                 .roomId(UUID.randomUUID().toString())
                 .roomName(roomName)
                 .status(Status.WAITING)
+                .hostId(user)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
                 .currentPlayers(currentPlayers)
                 .playerContents(new HashMap<>())
+                .readyStatus(new HashMap<>())
                 .build();
 
+        room.getReadyStatus().put(user, false);
         roomRepository.save(room);
         log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
@@ -54,18 +64,40 @@ public class RoomServiceImpl implements RoomService {
     // 대기방 리스트 조회
     @Override
     public List<RoomInfoRes> getRoomList() {
-        Iterable<Room> rooms = roomRepository.findAll();
-        List<RoomInfoRes> roomList = new ArrayList<>();
+        List<Room> roomList = StreamSupport.stream(roomRepository.findAll().spliterator(), false)
+                .filter(Objects::nonNull)
+                .toList();
 
-        for (Room room : rooms) {
-            if (room != null) {
-                roomList.add(RoomInfoRes.from(room));
-            }
+        if (roomList.isEmpty()) {
+            log.warn("대기방이 없습니다. 빈 리스트를 반환합니다.");
+            return List.of();
         }
 
-        log.info("대기방 조회 | {}개", roomList.size());
+        List<Long> hostIds = roomList.stream()
+                .map(room -> Long.valueOf(room.getHostId()))
+                .distinct()
+                .toList();
 
-        return roomList;
+        List<UserRes> hosts = userServiceClient.getUsers(new UserInfoListReq(hostIds));
+
+        List<RoomInfoRes> roomInfoList = roomList.stream()
+                        .map(room -> {
+                            UserRes hostInfo = hosts.stream()
+                                    .filter(user -> user.userId().equals(Long.valueOf(room.getHostId())))
+                                    .findFirst()
+                                    .orElse(null);
+
+                            PlayerRes simpleHostInfo = Optional.ofNullable(hostInfo)
+                                    .map(PlayerRes::from)
+                                    .orElse(PlayerRes.defaultInstance());
+
+                            return RoomInfoRes.from(room, simpleHostInfo);
+                        })
+                        .toList();
+
+        log.info("대기방 조회 | {}개", roomInfoList.size());
+
+        return roomInfoList;
     }
 
     // 플레이어 참여
@@ -98,6 +130,17 @@ public class RoomServiceImpl implements RoomService {
         room.getCurrentPlayers().remove(user);
         room.getPlayerContents().remove(user);
         room.getReadyStatus().remove(user);
+
+        if (room.getHostId().equals(user)) {
+            if (!room.getCurrentPlayers().isEmpty()) {
+                room.setHostId(room.getCurrentPlayers().get(0));
+                log.info("방장 변경 | roomId: {}, newHost: {}", room.getRoomId(), room.getHostId());
+            } else {
+                roomRepository.delete(room);
+                log.info("방 삭제됨 | roomId: {}", room.getRoomId());
+                return null;
+            }
+        }
 
         roomRepository.save(room);
         log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());

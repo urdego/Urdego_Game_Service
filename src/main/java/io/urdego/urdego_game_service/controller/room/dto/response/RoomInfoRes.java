@@ -9,16 +9,18 @@ public record RoomInfoRes(
         String roomName,
         int maxPlayers,
         int currentPlayersCount,
-        int totalRounds
+        int totalRounds,
+        PlayerRes hostInfo
 ) {
-    public static RoomInfoRes from(Room room) {
+    public static RoomInfoRes from(Room room, PlayerRes hostInfo) {
         return new RoomInfoRes(
                 room.getRoomId(),
                 room.getStatus(),
                 room.getRoomName(),
                 room.getMaxPlayers(),
                 room.getCurrentPlayers().size(),
-                room.getTotalRounds()
+                room.getTotalRounds(),
+                hostInfo
         );
     }
 }
