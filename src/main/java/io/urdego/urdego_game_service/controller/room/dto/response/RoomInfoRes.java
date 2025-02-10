@@ -1,7 +1,6 @@
 package io.urdego.urdego_game_service.controller.room.dto.response;
 
 import io.urdego.urdego_game_service.common.enums.Status;
-import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 
 public record RoomInfoRes(
@@ -11,9 +10,9 @@ public record RoomInfoRes(
         int maxPlayers,
         int currentPlayersCount,
         int totalRounds,
-        UserRes userRes
+        PlayerRes hostInfo
 ) {
-    public static RoomInfoRes from(Room room, UserRes userRes) {
+    public static RoomInfoRes from(Room room, PlayerRes hostInfo) {
         return new RoomInfoRes(
                 room.getRoomId(),
                 room.getStatus(),
@@ -21,7 +20,7 @@ public record RoomInfoRes(
                 room.getMaxPlayers(),
                 room.getCurrentPlayers().size(),
                 room.getTotalRounds(),
-                userRes
+                hostInfo
         );
     }
 }

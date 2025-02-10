@@ -6,6 +6,7 @@ import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
+import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomPlayersRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomCreateRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
@@ -83,7 +84,8 @@ public class RoomServiceImpl implements RoomService {
                                     .findFirst()
                                     .orElse(null);
 
-                            return RoomInfoRes.from(room, hostInfo);
+                            PlayerRes simpleHostInfo = (hostInfo != null) ? PlayerRes.from(hostInfo) : null;
+                            return RoomInfoRes.from(room, simpleHostInfo);
                         })
                         .toList();
 
