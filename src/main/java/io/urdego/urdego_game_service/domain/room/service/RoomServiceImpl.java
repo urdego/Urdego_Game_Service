@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.StreamSupport;
 
 @Slf4j
 @Service
@@ -63,11 +64,13 @@ public class RoomServiceImpl implements RoomService {
     // 대기방 리스트 조회
     @Override
     public List<RoomInfoRes> getRoomList() {
-        Iterable<Room> rooms = roomRepository.findAll();
+        List<Room> roomList = StreamSupport.stream(roomRepository.findAll().spliterator(), false)
+                .filter(Objects::nonNull)
+                .toList();
 
-        List<Room> roomList = new ArrayList<>();
-        for (Room room : rooms) {
-            roomList.add(room);
+        if (roomList.isEmpty()) {
+            log.warn("대기방이 없습니다. 빈 리스트를 반환합니다.");
+            return List.of();
         }
 
         List<Long> hostIds = roomList.stream()
@@ -84,7 +87,10 @@ public class RoomServiceImpl implements RoomService {
                                     .findFirst()
                                     .orElse(null);
 
-                            PlayerRes simpleHostInfo = (hostInfo != null) ? PlayerRes.from(hostInfo) : null;
+                            PlayerRes simpleHostInfo = Optional.ofNullable(hostInfo)
+                                    .map(PlayerRes::from)
+                                    .orElse(PlayerRes.defaultInstance());
+
                             return RoomInfoRes.from(room, simpleHostInfo);
                         })
                         .toList();

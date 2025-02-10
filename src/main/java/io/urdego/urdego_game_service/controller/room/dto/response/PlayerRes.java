@@ -7,6 +7,14 @@ public record PlayerRes(
         String nickname,
         String activeCharacter
 ) {
+    public static PlayerRes defaultInstance() {
+        return new PlayerRes(
+                null,
+                "Unknown",
+                "BASIC"
+        );
+    }
+
     public static PlayerRes from(UserRes userRes) {
         return new PlayerRes(
                 userRes.userId(),
