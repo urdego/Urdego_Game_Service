@@ -1,7 +1,8 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
 import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
-import io.urdego.urdego_game_service.controller.client.user.dto.CharacterRes;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
+import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
@@ -62,19 +63,33 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public List<RoomInfoRes> getRoomList() {
         Iterable<Room> rooms = roomRepository.findAll();
-        List<RoomInfoRes> roomList = new ArrayList<>();
 
+        List<Room> roomList = new ArrayList<>();
         for (Room room : rooms) {
-            if (room != null) {
-                CharacterRes character = userServiceClient.getCharacterInfo(Long.valueOf(room.getHostId()));
-                // TODO user쪽 다음 push때 병렬처리로 바꿔주기 List로 받아오게끔
-                roomList.add(RoomInfoRes.from(room, character));
-            }
+            roomList.add(room);
         }
 
-        log.info("대기방 조회 | {}개", roomList.size());
+        List<Long> hostIds = roomList.stream()
+                .map(room -> Long.valueOf(room.getHostId()))
+                .distinct()
+                .toList();
 
-        return roomList;
+        List<UserRes> hosts = userServiceClient.getUsers(new UserInfoListReq(hostIds));
+
+        List<RoomInfoRes> roomInfoList = roomList.stream()
+                        .map(room -> {
+                            UserRes hostInfo = hosts.stream()
+                                    .filter(user -> user.userId().equals(Long.valueOf(room.getHostId())))
+                                    .findFirst()
+                                    .orElse(null);
+
+                            return RoomInfoRes.from(room, hostInfo);
+                        })
+                        .toList();
+
+        log.info("대기방 조회 | {}개", roomInfoList.size());
+
+        return roomInfoList;
     }
 
     // 플레이어 참여
