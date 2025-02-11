@@ -58,7 +58,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
-        return RoomCreateRes.from(room);
+        return RoomCreateRes.from(room, getCurrentPlayersInfo(room));
     }
 
     // 대기방 리스트 조회
@@ -115,7 +115,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 참여 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return RoomPlayersRes.from(room);
+        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
     }
 
     // 플레이어 삭제
@@ -145,7 +145,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return RoomPlayersRes.from(room);
+        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
     }
 
     // 플레이어 준비
@@ -156,7 +156,7 @@ public class RoomServiceImpl implements RoomService {
         room.getReadyStatus().put(request.userId().toString(), request.isReady());
         roomRepository.save(room);
 
-        return RoomPlayersRes.from(room);
+        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
     }
 
     // 컨텐츠 등록
@@ -195,5 +195,13 @@ public class RoomServiceImpl implements RoomService {
         }
 
         return room;
+    }
+
+    private List<UserRes> getCurrentPlayersInfo(Room room) {
+        List<Long> userIds = room.getCurrentPlayers().stream()
+                .map(Long::valueOf)
+                .toList();
+
+        return userServiceClient.getUsers(new UserInfoListReq(userIds));
     }
 }
