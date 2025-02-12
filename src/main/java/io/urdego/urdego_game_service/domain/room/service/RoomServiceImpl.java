@@ -190,6 +190,14 @@ public class RoomServiceImpl implements RoomService {
         Room room = roomRepository.findById(roomId)
                 .orElseThrow(() -> new RoomException(ExceptionMessage.ROOM_NOT_FOUND));
 
+        if (room.getCurrentPlayers() == null) {
+            room.setCurrentPlayers(new ArrayList<>());
+        }
+
+        if (room.getReadyStatus() == null) {
+            room.setReadyStatus(new HashMap<>());
+        }
+
         if (room.getPlayerContents() == null) {
             room.setPlayerContents(new HashMap<>());
         }
