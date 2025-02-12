@@ -5,13 +5,15 @@ import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 public record PlayerRes(
         Long userId,
         String nickname,
-        String activeCharacter
+        String activeCharacter,
+        int level
 ) {
     public static PlayerRes defaultInstance() {
         return new PlayerRes(
                 null,
                 "Unknown",
-                "BASIC"
+                "BASIC",
+                0
         );
     }
 
@@ -19,7 +21,8 @@ public record PlayerRes(
         return new PlayerRes(
                 userRes.userId(),
                 userRes.nickname(),
-                userRes.activeCharacter()
+                userRes.activeCharacter(),
+                userRes.level()
         );
     }
 }
