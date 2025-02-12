@@ -6,23 +6,28 @@ import io.urdego.urdego_game_service.domain.room.entity.Room;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public record RoomPlayersRes(
         String roomId,
         Status status,
-        List<String> currentPlayers,
+        List<PlayerRes> currentPlayers,
         String host,
         Map<String, Boolean> readyStatus,
         Boolean allReady
 ) {
     public static RoomPlayersRes from(Room room, List<UserRes> users) {
-        // userId -> nickname 매핑 메서드
         Map<String, String> userIdToNickname = users.stream()
                 .collect(Collectors.toMap(userRes -> String.valueOf(userRes.userId()), UserRes::nickname));
 
-        List<String> currentPlayers = room.getCurrentPlayers().stream()
-                .map(userIdToNickname::get)
+        Map<String, UserRes> userIdToUserRes = users.stream()
+                .collect(Collectors.toMap(userRes -> String.valueOf(userRes.userId()), userRes -> userRes));
+
+        List<PlayerRes> currentPlayers = room.getCurrentPlayers().stream()
+                .map(userId -> Optional.ofNullable(userIdToUserRes.get(userId))
+                        .map(PlayerRes::from)
+                        .orElse(PlayerRes.defaultInstance()))
                 .toList();
 
         String host = room.getCurrentPlayers().isEmpty() ? null : userIdToNickname.get(room.getCurrentPlayers().get(0));
