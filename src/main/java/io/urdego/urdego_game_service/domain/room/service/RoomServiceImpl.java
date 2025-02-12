@@ -35,10 +35,6 @@ public class RoomServiceImpl implements RoomService {
     // 대기방 생성
     @Override
     public RoomCreateRes createRoom(RoomCreateReq request) {
-        List<String> currentPlayers = new ArrayList<>();
-        String user = request.userId();
-        currentPlayers.add(user);
-
         String roomName = (request.roomName() == null || request.roomName().isBlank())
                 ? "어데고 게임방" : request.roomName();
 
@@ -46,15 +42,13 @@ public class RoomServiceImpl implements RoomService {
                 .roomId(UUID.randomUUID().toString())
                 .roomName(roomName)
                 .status(Status.WAITING)
-                .hostId(user)
                 .maxPlayers(request.maxPlayers())
                 .totalRounds(request.totalRounds())
-                .currentPlayers(currentPlayers)
+                .currentPlayers(new ArrayList<>())
                 .playerContents(new HashMap<>())
                 .readyStatus(new HashMap<>())
                 .build();
 
-        room.getReadyStatus().put(user, false);
         roomRepository.save(room);
         log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
@@ -109,6 +103,12 @@ public class RoomServiceImpl implements RoomService {
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
+
+        if (room.getHostId() == null || room.getHostId().isBlank()) {
+            room.setHostId(user);
+            log.info("방장 설정 | roomId: {}, hostId: {}", request.roomId(), user);
+        }
+
         room.getCurrentPlayers().add(user);
         room.getReadyStatus().put(user, false);
 

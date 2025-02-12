@@ -14,7 +14,6 @@ import io.urdego.urdego_game_service.controller.game.dto.response.ScoreRes;
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
-import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
