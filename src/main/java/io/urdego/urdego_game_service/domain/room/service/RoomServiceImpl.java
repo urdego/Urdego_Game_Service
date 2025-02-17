@@ -1,8 +1,6 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
-import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
-import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
-import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
+import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
@@ -13,6 +11,8 @@ import io.urdego.urdego_game_service.controller.room.dto.response.RoomInfoRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.room.RoomException;
+import io.urdego.urdego_game_service.domain.player.entity.Player;
+import io.urdego.urdego_game_service.domain.player.service.PlayerService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.repository.RoomRepository;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @Slf4j
@@ -30,7 +31,7 @@ import java.util.stream.StreamSupport;
 public class RoomServiceImpl implements RoomService {
 
     private final RoomRepository roomRepository;
-    private final UserServiceClient userServiceClient;
+    private final PlayerService playerService;
 
     // 대기방 생성
     @Override
@@ -52,7 +53,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 생성 | roomId: {}", room.getRoomId());
 
-        return RoomCreateRes.from(room, getCurrentPlayersInfo(room));
+        return RoomCreateRes.from(room);
     }
 
     // 대기방 리스트 조회
@@ -72,20 +73,19 @@ public class RoomServiceImpl implements RoomService {
                 .distinct()
                 .toList();
 
-        List<UserRes> hosts = userServiceClient.getUsers(new UserInfoListReq(hostIds));
+       Map<Long, Player> hostMap = hostIds.stream()
+               .map(playerService::getPlayer)
+               .filter(Objects::nonNull)
+               .collect(Collectors.toMap(Player::getUserId, player -> player));
 
         List<RoomInfoRes> roomInfoList = roomList.stream()
                         .map(room -> {
-                            UserRes hostInfo = hosts.stream()
-                                    .filter(user -> user.userId().equals(room.getHostId()))
-                                    .findFirst()
-                                    .orElse(null);
+                            Player hostInfo = hostMap.get(room.getHostId());
+                            if (hostInfo == null) {
+                                throw new PlayerException(ExceptionMessage.USER_NOT_FOUND, "hostId: " + room.getHostId());
+                            }
 
-                            PlayerRes simpleHostInfo = Optional.ofNullable(hostInfo)
-                                    .map(PlayerRes::from)
-                                    .orElse(PlayerRes.defaultInstance());
-
-                            return RoomInfoRes.from(room, simpleHostInfo);
+                            return RoomInfoRes.from(room, PlayerRes.from(hostInfo));
                         })
                         .toList();
 
@@ -101,7 +101,7 @@ public class RoomServiceImpl implements RoomService {
         Long user = request.userId();
 
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
-            throw new RoomException(ExceptionMessage.ROOM_FULL);
+            throw new RoomException(ExceptionMessage.ROOM_FULL, "roomId: " + request.roomId());
         }
 
         if (room.getHostId() == null) {
@@ -115,7 +115,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 참여 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
+        return getCurrentPlayersInfo(room);
     }
 
     // 플레이어 삭제
@@ -125,7 +125,7 @@ public class RoomServiceImpl implements RoomService {
         Long user = request.userId();
 
         if (!room.getCurrentPlayers().contains(user)) {
-            throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
+            throw new RoomException(ExceptionMessage.USER_NOT_FOUND, "userId: " + request.userId());
         }
         room.getCurrentPlayers().remove(user);
         room.getPlayerContents().remove(user);
@@ -145,7 +145,7 @@ public class RoomServiceImpl implements RoomService {
         roomRepository.save(room);
         log.info("대기방 플레이어 삭제 | roomId: {}, currentPlayers: {}", request.roomId(), room.getCurrentPlayers());
 
-        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
+        return getCurrentPlayersInfo(room);
     }
 
     // 플레이어 준비
@@ -156,7 +156,7 @@ public class RoomServiceImpl implements RoomService {
         room.getReadyStatus().put(request.userId(), request.isReady());
         roomRepository.save(room);
 
-        return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
+        return getCurrentPlayersInfo(room);
     }
 
     // 컨텐츠 등록
@@ -206,8 +206,28 @@ public class RoomServiceImpl implements RoomService {
         return room;
     }
 
-    private List<UserRes> getCurrentPlayersInfo(Room room) {
-        List<Long> userIds = room.getCurrentPlayers().stream().toList();
-        return userServiceClient.getUsers(new UserInfoListReq(userIds));
+    // 방 플레이어 정보 불러오기
+    private RoomPlayersRes getCurrentPlayersInfo(Room room) {
+        List<Player> players = room.getCurrentPlayers().stream()
+                .map(playerService::getPlayer)
+                .toList();
+
+        Map<Long, String> userIdToNickname = players.stream()
+                .collect(Collectors.toMap(Player::getUserId, Player::getNickname));
+
+        List<PlayerRes> currentPlayers = players.stream()
+                .map(PlayerRes::from)
+                .toList();
+
+        String host = userIdToNickname.get(room.getHostId());
+
+        Map<String, Boolean> readyStatus = room.getReadyStatus().entrySet().stream()
+                .collect(Collectors.toMap(entry -> userIdToNickname.get(entry.getKey()), Map.Entry::getValue));
+
+        boolean allReady = players.stream()
+                .filter(player -> !player.getUserId().equals(room.getHostId()))
+                .allMatch(player -> room.getReadyStatus().getOrDefault(player.getUserId(), false));
+
+        return RoomPlayersRes.from(room, currentPlayers, host, readyStatus, allReady);
     }
 }
