@@ -15,8 +15,8 @@ public record RoomCreateRes(
         List<String> currentPlayers
 ) {
     public static RoomCreateRes from(Room room, List<UserRes> users) {
-        Map<String, String> userIdToNickname = users.stream()
-                .collect(Collectors.toMap(userRes -> String.valueOf(userRes.userId()), UserRes::nickname));
+        Map<Long, String> userIdToNickname = users.stream()
+                .collect(Collectors.toMap(UserRes::userId, UserRes::nickname));
 
         List<String> currentPlayers = room.getCurrentPlayers().stream()
                 .map(userIdToNickname::get)

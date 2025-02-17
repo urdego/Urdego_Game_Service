@@ -19,13 +19,13 @@ public class Answer {
     @Indexed
     private String questionId;
 
-    private String userId;
+    private Long userId;
     private double latitude;
     private double longitude;
     private int score;
 
     @Builder
-    public Answer(String answerId, String questionId, String userId, double latitude, double longitude, int score) {
+    public Answer(String answerId, String questionId, Long userId, double latitude, double longitude, int score) {
         this.answerId = answerId;
         this.questionId = questionId;
         this.userId = userId;

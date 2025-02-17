@@ -68,7 +68,7 @@ public class RoomServiceImpl implements RoomService {
         }
 
         List<Long> hostIds = roomList.stream()
-                .map(room -> Long.valueOf(room.getHostId()))
+                .map(Room::getHostId)
                 .distinct()
                 .toList();
 
@@ -77,7 +77,7 @@ public class RoomServiceImpl implements RoomService {
         List<RoomInfoRes> roomInfoList = roomList.stream()
                         .map(room -> {
                             UserRes hostInfo = hosts.stream()
-                                    .filter(user -> user.userId().equals(Long.valueOf(room.getHostId())))
+                                    .filter(user -> user.userId().equals(room.getHostId()))
                                     .findFirst()
                                     .orElse(null);
 
@@ -98,13 +98,13 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public RoomPlayersRes joinRoom(PlayerReq request) {
         Room room = findRoomById(request.roomId());
-        String user = request.userId().toString();
+        Long user = request.userId();
 
         if (room.getCurrentPlayers().size() >= room.getMaxPlayers()) {
             throw new RoomException(ExceptionMessage.ROOM_FULL);
         }
 
-        if (room.getHostId() == null || room.getHostId().isBlank()) {
+        if (room.getHostId() == null) {
             room.setHostId(user);
             log.info("방장 설정 | roomId: {}, hostId: {}", request.roomId(), user);
         }
@@ -122,7 +122,7 @@ public class RoomServiceImpl implements RoomService {
     @Override
     public RoomPlayersRes removePlayer(PlayerReq request) {
         Room room = findRoomById(request.roomId());
-        String user = request.userId().toString();
+        Long user = request.userId();
 
         if (!room.getCurrentPlayers().contains(user)) {
             throw new RoomException(ExceptionMessage.USER_NOT_FOUND);
@@ -153,7 +153,7 @@ public class RoomServiceImpl implements RoomService {
     public RoomPlayersRes readyPlayer(PlayerReq request) {
         Room room = findRoomById(request.roomId());
 
-        room.getReadyStatus().put(request.userId().toString(), request.isReady());
+        room.getReadyStatus().put(request.userId(), request.isReady());
         roomRepository.save(room);
 
         return RoomPlayersRes.from(room, getCurrentPlayersInfo(room));
@@ -167,7 +167,7 @@ public class RoomServiceImpl implements RoomService {
             throw new RoomException(ExceptionMessage.CONTENTS_OVER);
         }
 
-        room.getPlayerContents().put(request.userId().toString(), request.contentIds());
+        room.getPlayerContents().put(request.userId(), request.contentIds());
         roomRepository.save(room);
         log.info("컨텐츠 등록됨 | userId: {}, contentIds:{}", request.userId(), request.contentIds());
     }
@@ -207,10 +207,7 @@ public class RoomServiceImpl implements RoomService {
     }
 
     private List<UserRes> getCurrentPlayersInfo(Room room) {
-        List<Long> userIds = room.getCurrentPlayers().stream()
-                .map(Long::valueOf)
-                .toList();
-
+        List<Long> userIds = room.getCurrentPlayers().stream().toList();
         return userServiceClient.getUsers(new UserInfoListReq(userIds));
     }
 }

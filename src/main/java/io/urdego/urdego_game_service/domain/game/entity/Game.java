@@ -19,15 +19,15 @@ public class Game {
     private String gameId;
     private String roomId;
     private Status status;
-    private List<String> players;
+    private List<Long> players;
     private List<String> questionIds;
-    private Map<Integer, Map<String, Integer>> roundScores;
-    private Map<String, Integer> totalScores;
+    private Map<Integer, Map<Long, Integer>> roundScores;
+    private Map<Long, Integer> totalScores;
     private Instant startedAt;
     private Instant endedAt;
 
     @Builder
-    public Game(String gameId, String roomId, Status status, List<String> players, List<String> questionIds, Map<Integer, Map<String, Integer>> roundScores, Map<String, Integer> totalScores, Instant startedAt, Instant endedAt) {
+    public Game(String gameId, String roomId, Status status, List<Long> players, List<String> questionIds, Map<Integer, Map<Long, Integer>> roundScores, Map<Long, Integer> totalScores, Instant startedAt, Instant endedAt) {
         this.gameId = gameId;
         this.roomId = roomId;
         this.status = status;

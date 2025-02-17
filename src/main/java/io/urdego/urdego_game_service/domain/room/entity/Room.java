@@ -5,7 +5,6 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,15 +18,15 @@ public class Room {
     private String roomId;
     private String roomName;
     private Status status;
-    private String hostId;
+    private Long hostId;
     private int maxPlayers;
     private int totalRounds;
-    private List<String> currentPlayers;
-    private Map<String, List<String>> playerContents;
-    private Map<String, Boolean> readyStatus;
+    private List<Long> currentPlayers;
+    private Map<Long, List<String>> playerContents;
+    private Map<Long, Boolean> readyStatus;
 
     @Builder
-    public Room(String roomId, String roomName, Status status, String hostId, int maxPlayers, int totalRounds, List<String> currentPlayers, Map<String, List<String>> playerContents, Map<String, Boolean> readyStatus) {
+    public Room(String roomId, String roomName, Status status, Long hostId, int maxPlayers, int totalRounds, List<Long> currentPlayers, Map<Long, List<String>> playerContents, Map<Long, Boolean> readyStatus) {
         this.roomId = roomId;
         this.roomName = roomName;
         this.status = status;

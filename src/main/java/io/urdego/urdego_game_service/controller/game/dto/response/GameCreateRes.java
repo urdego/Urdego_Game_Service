@@ -9,7 +9,7 @@ public record GameCreateRes(
         String gameId,
         String roomId,
         Status status,
-        List<String> players,
+        List<Long> players,
         List<String> questionIds
 ) {
     public static GameCreateRes from(Game game) {

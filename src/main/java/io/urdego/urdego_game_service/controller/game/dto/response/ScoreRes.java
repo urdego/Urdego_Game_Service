@@ -16,8 +16,8 @@ public record ScoreRes(
         List<PlayerScore> totalScore
 ) {
     public static ScoreRes from(Game game, int roundNum, int totalRounds, List<UserRes> users) {
-        Map<String, Integer> currentRoundScores = game.getRoundScores().getOrDefault(roundNum, new HashMap<>());
-        Map<String, Integer> currentTotalScores = game.getTotalScores();
+        Map<Long, Integer> currentRoundScores = game.getRoundScores().getOrDefault(roundNum, new HashMap<>());
+        Map<Long, Integer> currentTotalScores = game.getTotalScores();
         List<PlayerScore> roundScoreList = toRankingList(currentRoundScores, users);
         List<PlayerScore> totalScoreList = toRankingList(currentTotalScores, users);
 
@@ -30,15 +30,15 @@ public record ScoreRes(
         );
     }
 
-    private static List<PlayerScore> toRankingList(Map<String, Integer> scoreMap, List<UserRes> users) {
+    private static List<PlayerScore> toRankingList(Map<Long, Integer> scoreMap, List<UserRes> users) {
         Map<Long, UserRes> userMap = users.stream()
                 .collect(Collectors.toMap(UserRes::userId, userRes -> userRes));
 
         AtomicInteger rank = new AtomicInteger(1);
         return scoreMap.entrySet().stream()
-                .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed())
+                .sorted(Comparator.comparingInt(Map.Entry<Long, Integer>::getValue).reversed())
                 .map(entry -> {
-                    Long userId = Long.valueOf(entry.getKey());
+                    Long userId = entry.getKey();
                     int score = entry.getValue();
 
                     PlayerRes playerRes = Optional.ofNullable(userMap.get(userId))

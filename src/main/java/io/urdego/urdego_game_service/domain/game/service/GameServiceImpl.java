@@ -54,7 +54,7 @@ public class GameServiceImpl implements GameService {
                 .build();
 
         // 초기 점수 세팅
-        for (String player : room.getCurrentPlayers()) {
+        for (Long player : room.getCurrentPlayers()) {
             game.getTotalScores().put(player, 0);
         }
 
@@ -111,8 +111,10 @@ public class GameServiceImpl implements GameService {
         game.setEndedAt(Instant.now());
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        Map<String, Integer> exp = calculateExp(game.getTotalScores());
+        Map<Long, Integer> exp = calculateExp(game.getTotalScores());
         log.info("경험치 계산 결과: {}", exp);
+
+        playerService.deletePlayers(game.getTotalScores().keySet());
 
         return GameEndRes.of(game, exp);
     }
@@ -147,7 +149,7 @@ public class GameServiceImpl implements GameService {
 
     // 라운드 점수 업뎃
     private void updateRoundScores(Game game, int roundNum, List<Answer> answers) {
-        Map<Integer, Map<String, Integer>> roundScores = game.getRoundScores();
+        Map<Integer, Map<Long, Integer>> roundScores = game.getRoundScores();
 
         if (roundScores == null) {
             roundScores = new HashMap<>();
@@ -155,13 +157,13 @@ public class GameServiceImpl implements GameService {
 
         roundScores.putIfAbsent(roundNum, new HashMap<>());
 
-        Map<String, Integer> roundScore = roundScores.get(roundNum);
+        Map<Long, Integer> roundScore = roundScores.get(roundNum);
         for (Answer answer : answers) {
             log.info("Answer: userId={}, score={}", answer.getUserId(), answer.getScore());
             roundScore.put(answer.getUserId(), answer.getScore());
         }
 
-        for (String player : game.getPlayers()) {
+        for (Long player : game.getPlayers()) {
             roundScore.putIfAbsent(player, 0);
         }
 
@@ -172,7 +174,7 @@ public class GameServiceImpl implements GameService {
 
     // 전체 점수 업뎃
     private void updateTotalScores(Game game) {
-        Map<String, Integer> totalScores = game.getTotalScores();
+        Map<Long, Integer> totalScores = game.getTotalScores();
 
         game.getRoundScores().forEach((roundNum, roundScore) -> {
             roundScore.forEach((userId, score) -> {
@@ -186,8 +188,8 @@ public class GameServiceImpl implements GameService {
     }
 
     // 경험치 계산 (점수의 0.1%)
-    private Map<String, Integer> calculateExp(Map<String, Integer> totalScores) {
-        Map<String, Integer> expMap = new HashMap<>();
+    private Map<Long, Integer> calculateExp(Map<Long, Integer> totalScores) {
+        Map<Long, Integer> expMap = new HashMap<>();
         totalScores.forEach((userId, score) -> {
             int exp = (int) Math.ceil(score * 0.01);
             expMap.put(userId, exp);
