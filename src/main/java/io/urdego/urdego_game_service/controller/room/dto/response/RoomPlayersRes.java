@@ -11,6 +11,7 @@ import java.util.stream.Collectors;
 
 public record RoomPlayersRes(
         String roomId,
+        String roomName,
         Status status,
         List<PlayerRes> currentPlayers,
         String host,
@@ -35,11 +36,19 @@ public record RoomPlayersRes(
         Map<String, Boolean> readyStatus = room.getReadyStatus().entrySet().stream()
                 .collect(Collectors.toMap(entry -> userIdToNickname.get(entry.getKey()), Map.Entry::getValue));
 
-        boolean allReady = room.getReadyStatus().size() == room.getCurrentPlayers().size()
-                && room.getReadyStatus().values().stream().allMatch(ready -> ready);
+        boolean allReady = false;
+        if (host != null) {
+            long readyCount = room.getReadyStatus().entrySet().stream()
+                    .filter(entry -> !entry.getKey().equals(host))
+                    .filter(Map.Entry::getValue)
+                    .count();
+
+            allReady = readyCount == room.getCurrentPlayers().size() - 1;
+        }
 
         return new RoomPlayersRes(
                 room.getRoomId(),
+                room.getRoomName(),
                 room.getStatus(),
                 currentPlayers,
                 host,

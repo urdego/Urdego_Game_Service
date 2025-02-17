@@ -169,6 +169,7 @@ public class RoomServiceImpl implements RoomService {
 
         room.getPlayerContents().put(request.userId().toString(), request.contentIds());
         roomRepository.save(room);
+        log.info("컨텐츠 등록됨 | userId: {}, contentIds:{}", request.userId(), request.contentIds());
     }
 
     // 대기방 상태 변경
