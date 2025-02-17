@@ -7,4 +7,7 @@ public class RoomException extends BaseException {
     public RoomException(ExceptionMessage message) {
         super(message);
     }
+    public RoomException(ExceptionMessage message, String additionalMessage) {
+        super(message, additionalMessage);
+    }
 }
