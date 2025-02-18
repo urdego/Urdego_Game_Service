@@ -5,7 +5,7 @@ import io.urdego.urdego_game_service.domain.round.entity.Answer;
 public record AnswerRes(
         String roomId,
         String questionId,
-        String userId,
+        Long userId,
         double latitude,
         double longitude
 ) {

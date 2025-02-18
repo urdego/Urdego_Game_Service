@@ -1,12 +1,9 @@
 package io.urdego.urdego_game_service.controller.game.dto.response;
 
-import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
-import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
+
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 
-import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.stream.Collectors;
+import java.util.List;
 
 public record ScoreRes(
         String roomId,
@@ -15,38 +12,13 @@ public record ScoreRes(
         List<PlayerScore> roundScore,
         List<PlayerScore> totalScore
 ) {
-    public static ScoreRes from(Game game, int roundNum, int totalRounds, List<UserRes> users) {
-        Map<String, Integer> currentRoundScores = game.getRoundScores().getOrDefault(roundNum, new HashMap<>());
-        Map<String, Integer> currentTotalScores = game.getTotalScores();
-        List<PlayerScore> roundScoreList = toRankingList(currentRoundScores, users);
-        List<PlayerScore> totalScoreList = toRankingList(currentTotalScores, users);
-
+    public static ScoreRes from(Game game, int roundNum, int totalRounds, List<PlayerScore> roundScore, List<PlayerScore> totalScore) {
         return new ScoreRes(
                 game.getRoomId(),
                 roundNum,
                 roundNum == totalRounds,
-                roundScoreList,
-                totalScoreList
+                roundScore,
+                totalScore
         );
-    }
-
-    private static List<PlayerScore> toRankingList(Map<String, Integer> scoreMap, List<UserRes> users) {
-        Map<Long, UserRes> userMap = users.stream()
-                .collect(Collectors.toMap(UserRes::userId, userRes -> userRes));
-
-        AtomicInteger rank = new AtomicInteger(1);
-        return scoreMap.entrySet().stream()
-                .sorted(Comparator.comparingInt(Map.Entry<String, Integer>::getValue).reversed())
-                .map(entry -> {
-                    Long userId = Long.valueOf(entry.getKey());
-                    int score = entry.getValue();
-
-                    PlayerRes playerRes = Optional.ofNullable(userMap.get(userId))
-                            .map(PlayerRes::from)
-                            .orElse(PlayerRes.defaultInstance());
-
-                    return PlayerScore.from(rank.getAndIncrement(), playerRes, score);
-                })
-                .toList();
     }
 }

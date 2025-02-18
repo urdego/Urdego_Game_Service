@@ -1,5 +1,6 @@
 package io.urdego.urdego_game_service.domain.game.service;
 
+import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
 import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
 import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
@@ -10,9 +11,13 @@ import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.game.GameException;
+import io.urdego.urdego_game_service.controller.game.dto.response.PlayerScore;
 import io.urdego.urdego_game_service.controller.game.dto.response.ScoreRes;
+import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
+import io.urdego.urdego_game_service.domain.player.entity.Player;
+import io.urdego.urdego_game_service.domain.player.service.PlayerService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
@@ -25,6 +30,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -35,6 +42,7 @@ public class GameServiceImpl implements GameService {
     private final GameRepository gameRepository;
     private final RoomService roomService;
     private final RoundService roundService;
+    private final PlayerService playerService;
     private final UserServiceClient userServiceClient;
 
     // 게임 생성
@@ -54,7 +62,7 @@ public class GameServiceImpl implements GameService {
                 .build();
 
         // 초기 점수 세팅
-        for (String player : room.getCurrentPlayers()) {
+        for (Long player : room.getCurrentPlayers()) {
             game.getTotalScores().put(player, 0);
         }
 
@@ -90,13 +98,15 @@ public class GameServiceImpl implements GameService {
         log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
 
         Room room = roomService.findRoomById(game.getRoomId());
-        List<Long> userIds = room.getCurrentPlayers().stream()
-                .map(Long::valueOf)
+        List<Long> playerIds = room.getCurrentPlayers();
+        List<Player> players = playerIds.stream()
+                .map(playerService::getPlayer)
                 .toList();
 
-        List<UserRes> users = userServiceClient.getUsers(new UserInfoListReq(userIds));
+        List<PlayerScore> roundScoreList = calculateRanking(game.getRoundScores().getOrDefault(request.roundNum(), new HashMap<>()), players);
+        List<PlayerScore> totalScoreList = calculateRanking(game.getTotalScores(), players);
 
-        return ScoreRes.from(game, request.roundNum(), room.getTotalRounds(), users);
+        return ScoreRes.from(game, request.roundNum(), room.getTotalRounds(), roundScoreList, totalScoreList);
     }
 
     // 게임 종료
@@ -111,8 +121,10 @@ public class GameServiceImpl implements GameService {
         game.setEndedAt(Instant.now());
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        Map<String, Integer> exp = calculateExp(game.getTotalScores());
+        Map<Long, Integer> exp = calculateExp(game.getTotalScores());
         log.info("경험치 계산 결과: {}", exp);
+
+        playerService.deletePlayers(game.getTotalScores().keySet());
 
         return GameEndRes.of(game, exp);
     }
@@ -147,7 +159,7 @@ public class GameServiceImpl implements GameService {
 
     // 라운드 점수 업뎃
     private void updateRoundScores(Game game, int roundNum, List<Answer> answers) {
-        Map<Integer, Map<String, Integer>> roundScores = game.getRoundScores();
+        Map<Integer, Map<Long, Integer>> roundScores = game.getRoundScores();
 
         if (roundScores == null) {
             roundScores = new HashMap<>();
@@ -155,13 +167,13 @@ public class GameServiceImpl implements GameService {
 
         roundScores.putIfAbsent(roundNum, new HashMap<>());
 
-        Map<String, Integer> roundScore = roundScores.get(roundNum);
+        Map<Long, Integer> roundScore = roundScores.get(roundNum);
         for (Answer answer : answers) {
             log.info("Answer: userId={}, score={}", answer.getUserId(), answer.getScore());
             roundScore.put(answer.getUserId(), answer.getScore());
         }
 
-        for (String player : game.getPlayers()) {
+        for (Long player : game.getPlayers()) {
             roundScore.putIfAbsent(player, 0);
         }
 
@@ -172,7 +184,7 @@ public class GameServiceImpl implements GameService {
 
     // 전체 점수 업뎃
     private void updateTotalScores(Game game) {
-        Map<String, Integer> totalScores = game.getTotalScores();
+        Map<Long, Integer> totalScores = game.getTotalScores();
 
         game.getRoundScores().forEach((roundNum, roundScore) -> {
             roundScore.forEach((userId, score) -> {
@@ -186,13 +198,36 @@ public class GameServiceImpl implements GameService {
     }
 
     // 경험치 계산 (점수의 0.1%)
-    private Map<String, Integer> calculateExp(Map<String, Integer> totalScores) {
-        Map<String, Integer> expMap = new HashMap<>();
+    private Map<Long, Integer> calculateExp(Map<Long, Integer> totalScores) {
+        Map<Long, Integer> expMap = new HashMap<>();
         totalScores.forEach((userId, score) -> {
             int exp = (int) Math.ceil(score * 0.01);
             expMap.put(userId, exp);
         });
 
         return expMap;
+    }
+
+    // 랭킹 계산
+    private List<PlayerScore> calculateRanking(Map<Long, Integer> scoreMap, List<Player> players) {
+        Map<Long, Player> playerMap = players.stream()
+                .collect(Collectors.toMap(Player::getUserId, player -> player));
+
+        AtomicInteger rank = new AtomicInteger(1);
+
+        return scoreMap.entrySet().stream()
+                .sorted(Map.Entry.<Long, Integer>comparingByValue().reversed())
+                .map(entry -> {
+                    Long userId = entry.getKey();
+                    int score = entry.getValue();
+
+                    Player playerInfo = playerMap.get(userId);
+                    if (playerInfo == null) {
+                        throw new PlayerException(ExceptionMessage.USER_NOT_FOUND, "userId: " + userId);
+                    }
+
+                    return PlayerScore.from(rank.getAndIncrement(), PlayerRes.from(playerInfo), score);
+                })
+                .toList();
     }
 }
