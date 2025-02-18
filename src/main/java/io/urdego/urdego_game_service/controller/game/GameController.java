@@ -23,7 +23,7 @@ public class GameController {
 
     private final GameService gameService;
 
-    @Tag(name = "게임 API")
+    @Tag(name = "백엔드 API")
     @Operation(summary = "게임 생성", description = "roomId로 게임 생성")
     @PostMapping("/start")
     public ResponseEntity<GameCreateRes> startGame(@RequestBody GameCreateReq request) {
