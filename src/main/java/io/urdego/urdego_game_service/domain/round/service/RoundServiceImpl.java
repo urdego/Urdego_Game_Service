@@ -1,13 +1,17 @@
 package io.urdego.urdego_game_service.domain.round.service;
 
 import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
+import io.urdego.urdego_game_service.controller.round.dto.request.CoordinateReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
 import io.urdego.urdego_game_service.controller.round.dto.response.AnswerRes;
+import io.urdego.urdego_game_service.controller.round.dto.response.CoordinateRes;
 import io.urdego.urdego_game_service.controller.round.dto.response.QuestionRes;
 import io.urdego.urdego_game_service.controller.client.content.ContentServiceClient;
 import io.urdego.urdego_game_service.controller.client.content.dto.ContentRes;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.round.QuestionException;
+import io.urdego.urdego_game_service.domain.player.entity.Player;
+import io.urdego.urdego_game_service.domain.player.service.PlayerService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
 import io.urdego.urdego_game_service.domain.round.entity.Answer;
@@ -32,6 +36,7 @@ public class RoundServiceImpl implements RoundService {
     private final AnswerRepository answerRepository;
     private final ContentServiceClient contentServiceClient;
     private final RoomService roomService;
+    private final PlayerService playerService;
 
     // 문제 생성
     @Override
@@ -77,6 +82,8 @@ public class RoundServiceImpl implements RoundService {
                     .roundNum(roundNum)
                     .latitude(targetLatitude)
                     .longitude(targetLongitude)
+                    .name(firstContent.contentName())
+                    .address(firstContent.address())
                     .hint(firstContent.hint())
                     .contents(selectedContents)
                     .build();
@@ -117,6 +124,44 @@ public class RoundServiceImpl implements RoundService {
         log.info("정답 저장 완료 | userId: {}, questionId: {}", answer.getUserId(), answer.getQuestionId());
 
         return AnswerRes.from(question.getRoomId(), answer);
+    }
+
+    // 라운드 결과 좌표 반환
+    @Override
+    public CoordinateRes roundResult(CoordinateReq request) {
+        Question question = findQuestionById(request.questionId());
+        List<Answer> answers = findAnswersByQuestionId(request.questionId());
+
+        CoordinateRes.Coordinate answerCoordinate = new CoordinateRes.Coordinate(
+                question.getLatitude(),
+                question.getLongitude()
+        );
+
+        List<Long> userIds = answers.stream()
+                .map(Answer::getUserId)
+                .distinct()
+                .toList();
+
+        List<Player> players = userIds.stream()
+                .map(playerService::getPlayer)
+                .toList();
+
+        Map<Long, Player> playerMap = players.stream()
+                .collect(Collectors.toMap(Player::getUserId, player -> player));
+
+        List<CoordinateRes.SubmitCoordinate> submitCoordinates = answers.stream()
+                .map(answer -> {
+                    Player player = playerMap.get(answer.getUserId());
+                    return new CoordinateRes.SubmitCoordinate(
+                            player.getNickname(),
+                            player.getActiveCharacter(),
+                            answer.getLatitude(),
+                            answer.getLongitude()
+                    );
+                })
+                .toList();
+
+        return CoordinateRes.from(question, answerCoordinate, submitCoordinates);
     }
 
     // questionId로 정답 정보 조회

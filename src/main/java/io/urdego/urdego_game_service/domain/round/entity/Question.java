@@ -18,16 +18,20 @@ public class Question {
     private int roundNum;
     private double latitude;
     private double longitude;
+    private String name;
+    private String address;
     private String hint;
     private List<String> contents;
 
     @Builder
-    public Question(String roomId, int roundNum, double latitude, double longitude, String hint, List<String> contents) {
+    public Question(String roomId, int roundNum, double latitude, double longitude, String name, String address, String hint, List<String> contents) {
         this.questionId = roomId + ":" + roundNum;
         this.roomId = roomId;
         this.roundNum = roundNum;
         this.latitude = latitude;
         this.longitude = longitude;
+        this.name = name;
+        this.address = address;
         this.hint = hint;
         this.contents = contents;
     }
