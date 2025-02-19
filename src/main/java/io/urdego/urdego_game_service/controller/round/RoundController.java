@@ -3,8 +3,10 @@ package io.urdego.urdego_game_service.controller.round;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
+import io.urdego.urdego_game_service.controller.round.dto.request.CoordinateReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
 import io.urdego.urdego_game_service.controller.round.dto.response.AnswerRes;
+import io.urdego.urdego_game_service.controller.round.dto.response.CoordinateRes;
 import io.urdego.urdego_game_service.controller.round.dto.response.QuestionRes;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +36,14 @@ public class RoundController {
     @PostMapping("/answer")
     public ResponseEntity<AnswerRes> submitAnswer(@RequestBody AnswerReq request) {
         AnswerRes response = roundService.submitAnswer(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Tag(name = "백엔드 API")
+    @Operation(summary = "라운드 정답 및 제출 좌표", description = "해당 라운드의 정답 위치 정보 및 사용자별 제출 좌표")
+    @PostMapping("/roundResult")
+    public ResponseEntity<CoordinateRes> roundResult(@RequestBody CoordinateReq request) {
+        CoordinateRes response = roundService.roundResult(request);
         return ResponseEntity.ok(response);
     }
 
