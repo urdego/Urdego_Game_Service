@@ -52,8 +52,8 @@ public class RoundServiceImpl implements RoundService {
                 .collect(Collectors.toList());
 
         // 총 3개 이상의 컨텐츠가 준비되지 않았으면?
-        if (allContents.size() < 3) {
-            int needed = 3 - allContents.size();
+        if (allContents.size() < room.getTotalRounds()) {
+            int needed = room.getTotalRounds() - allContents.size();
             log.info("사용자 제공 컨텐츠 부족 | 필요 추가 컨텐츠: {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
             serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
@@ -75,6 +75,10 @@ public class RoundServiceImpl implements RoundService {
                         return content.latitude() == targetLatitude && content.longitude() == targetLongitude;
                     })
                     .limit(3)
+                    .map(contentId -> {
+                        ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
+                        return content.url();
+                    })
                     .collect(Collectors.toList());
 
             newQuestion = Question.builder()
