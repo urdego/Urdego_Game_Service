@@ -22,11 +22,11 @@ public class Room {
     private int maxPlayers;
     private int totalRounds;
     private List<Long> currentPlayers;
-    private Map<Long, List<String>> playerContents;
+    private Map<Long, String> playerContents;
     private Map<Long, Boolean> readyStatus;
 
     @Builder
-    public Room(String roomId, String roomName, Status status, Long hostId, int maxPlayers, int totalRounds, List<Long> currentPlayers, Map<Long, List<String>> playerContents, Map<Long, Boolean> readyStatus) {
+    public Room(String roomId, String roomName, Status status, Long hostId, int maxPlayers, int totalRounds, List<Long> currentPlayers, Map<Long, String> playerContents, Map<Long, Boolean> readyStatus) {
         this.roomId = roomId;
         this.roomName = roomName;
         this.status = status;

@@ -1,5 +1,7 @@
 package io.urdego.urdego_game_service.domain.round.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.CoordinateReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
@@ -42,59 +44,62 @@ public class RoundServiceImpl implements RoundService {
     @Override
     public Question createQuestion(String roomId, int roundNum) {
         Room room = roomService.findRoomById(roomId);
+        ObjectMapper objectMapper = new ObjectMapper();
 
-        // 해당 게임의 기존 문제 조회
+        // 해당 게임의 기존 문제 조회 (중복 방지)
         List<Question> existingQuestions = questionRepository.findAllByRoomId(roomId);
+        Set<String> existingCoordinates = existingQuestions.stream()
+                .map(q -> q.getLatitude() + "," + q.getLongitude())
+                .collect(Collectors.toSet());
 
         List<String> allContents = room.getPlayerContents().values()
                 .stream()
-                .flatMap(Collection::stream)
+                .flatMap(jsonContent -> {
+                    try {
+                        return objectMapper.readValue(jsonContent, new TypeReference<List<String>>() {}).stream();
+                    } catch (Exception e) {
+                        throw new RuntimeException("JSON 역직렬화 실패", e);
+                    }
+                })
                 .collect(Collectors.toList());
 
-        // 총 3개 이상의 컨텐츠가 준비되지 않았으면?
+        log.info("전체 플레이어 컨텐츠 (등록된 ID): {}", allContents);
+
+        // 전체 라운드 수 이상의 컨텐츠가 준비되지 않았으면?
         if (allContents.size() < room.getTotalRounds()) {
             int needed = room.getTotalRounds() - allContents.size();
-            log.info("사용자 제공 컨텐츠 부족 | 필요 추가 컨텐츠: {}개", needed);
+            log.info("사용자 제공 컨텐츠 부족 | 게임 제공 컨텐츠 추가 요청: {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
             serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
         }
+        log.info("최종 allContents: {}", allContents);
 
         Collections.shuffle(allContents);
-        Question newQuestion;
+        Question newQuestion = null;
+        int maxAttempts = allContents.size();
 
-        do {
-            // 첫 번째 컨텐츠 기준으로 정답 설정
-            ContentRes firstContent = contentServiceClient.getContent(Long.valueOf(allContents.get(0)));
-            double targetLatitude = firstContent.latitude();
-            double targetLongitude = firstContent.longitude();
+        for (String contentId : allContents) {
+            ContentRes firstContent = contentServiceClient.getContent(Long.valueOf(contentId));
+            String coordinateKey = firstContent.latitude() + "," + firstContent.longitude();
 
-            // 동일한 위치를 가진 컨텐츠들로 필터링
-            List<String> selectedContents = allContents.stream()
-                    .filter(contentId -> {
-                        ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
-                        return content.latitude() == targetLatitude && content.longitude() == targetLongitude;
-                    })
-                    .limit(3)
-                    .map(contentId -> {
-                        ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
-                        return content.url();
-                    })
-                    .collect(Collectors.toList());
+            // 중복되지 않은 좌표를 찾으면 바로 문제 생성
+            if (!existingCoordinates.contains(coordinateKey) || existingQuestions.isEmpty()) {
+                existingCoordinates.add(coordinateKey);
+                newQuestion = buildQuestion(roomId, roundNum, firstContent, allContents);
+                break;
+            }
 
-            newQuestion = Question.builder()
-                    .roomId(roomId)
-                    .roundNum(roundNum)
-                    .latitude(targetLatitude)
-                    .longitude(targetLongitude)
-                    .name(firstContent.contentName())
-                    .address(firstContent.address())
-                    .hint(firstContent.hint())
-                    .contents(selectedContents)
-                    .build();
-        } while (isDuplicateQuestion(newQuestion, existingQuestions));
+            // 모두 중복되어 더이상 남은 컨텐츠가 없을 경우
+            if (--maxAttempts <= 0) {
+                log.warn("새로운 좌표를 찾을 수 없어 게임 제공 컨텐츠로 대체합니다.");
+                List<ContentRes> fallbackContents = contentServiceClient.getUrdegoContents(1);
+                ContentRes fallbackContent = fallbackContents.get(0);
+                newQuestion = buildQuestion(roomId, roundNum, fallbackContent, allContents);
+                break;
+            }
+        }
 
-        log.info("문제 생성 | roomId: {}, roundNum: {}", roomId, roundNum);
-
+        log.info("문제 생성 | roomId: {}, roundNum: {}, coordinate:{}. {}", roomId, roundNum, newQuestion.getLatitude(), newQuestion.getLongitude());
         return questionRepository.save(newQuestion);
     }
 
@@ -188,11 +193,36 @@ public class RoundServiceImpl implements RoundService {
                 .orElseThrow(() -> new QuestionException(ExceptionMessage.QUESTION_NOT_FOUND));
     }
 
-    // 중복 문제 체크 로직
-    private boolean isDuplicateQuestion(Question newQuestion, List<Question> existingQuestions) {
-        return existingQuestions.stream().anyMatch(existing ->
-                existing.getLatitude() == newQuestion.getLatitude() &&
-                existing.getLongitude() == newQuestion.getLongitude());
+    // 문제 저장
+    private Question buildQuestion(String roomId, int roundNum, ContentRes firstContent, List<String> allContents) {
+        double targetLatitude = firstContent.latitude();
+        double targetLongitude = firstContent.longitude();
+
+        Map<String, ContentRes> contentMap = allContents.stream()
+                .distinct()
+                .collect(Collectors.toMap(contentId -> contentId, contentId -> {
+                    ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
+                    log.info("🔍 컨텐츠 조회 | contentId: {}, 좌표: {}, {}", contentId, content.latitude(), content.longitude());
+                    return content;
+                }));
+
+        // 동일한 위치를 가진 컨텐츠들로 필터링
+        List<String> selectedContents = contentMap.values().stream()
+                .filter(content -> content.latitude() == targetLatitude && content.longitude() == targetLongitude)
+                .limit(3)
+                .map(ContentRes::url)
+                .collect(Collectors.toList());
+
+        return Question.builder()
+                .roomId(roomId)
+                .roundNum(roundNum)
+                .latitude(targetLatitude)
+                .longitude(targetLongitude)
+                .name(firstContent.contentName())
+                .address(firstContent.address())
+                .hint(firstContent.hint())
+                .contents(selectedContents)
+                .build();
     }
 
     // 거리 계산

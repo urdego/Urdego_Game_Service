@@ -1,5 +1,7 @@
 package io.urdego.urdego_game_service.domain.room.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
@@ -167,9 +169,16 @@ public class RoomServiceImpl implements RoomService {
             throw new RoomException(ExceptionMessage.CONTENTS_OVER);
         }
 
-        room.getPlayerContents().put(request.userId(), request.contentIds());
-        roomRepository.save(room);
-        log.info("컨텐츠 등록됨 | userId: {}, contentIds:{}", request.userId(), request.contentIds());
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            String jsonContentList = objectMapper.writeValueAsString(request.contentIds());
+
+            room.getPlayerContents().put(request.userId(), jsonContentList);
+            roomRepository.save(room);
+            log.info("컨텐츠 등록됨 | userId: {}, contentIds:{}", room.getPlayerContents().keySet(), room.getPlayerContents().values());
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Json 직렬화 오류", e);
+        }
     }
 
     // 대기방 상태 변경
