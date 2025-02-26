@@ -7,4 +7,7 @@ public class GameException extends BaseException {
     public GameException(ExceptionMessage message) {
         super(message);
     }
+    public GameException(ExceptionMessage message, String additionalMessage) {
+        super(message, additionalMessage);
+    }
 }
