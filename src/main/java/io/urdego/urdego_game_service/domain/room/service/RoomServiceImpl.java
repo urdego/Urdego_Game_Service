@@ -193,7 +193,7 @@ public class RoomServiceImpl implements RoomService {
         return room;
     }
 
-    // 방 정보 조회
+    // 대기방 정보 조회
     @Override
     @Transactional(readOnly = true)
     public Room findRoomById(String roomId) {
@@ -215,7 +215,13 @@ public class RoomServiceImpl implements RoomService {
         return room;
     }
 
-    // 방 플레이어 정보 불러오기
+    // 대기방 삭제
+    @Override
+    public void deleteRoom(String roomId) {
+        roomRepository.deleteById(roomId);
+    }
+
+    // 대기방 플레이어 정보 불러오기
     private RoomPlayersRes getCurrentPlayersInfo(Room room) {
         List<Player> players = room.getCurrentPlayers().stream()
                 .map(playerService::getPlayer)
