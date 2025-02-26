@@ -17,6 +17,7 @@ public enum ExceptionMessage {
     GAME_ALREADY_COMPLETED("이미 종료된 게임입니다.", HttpStatus.CONFLICT, "Game is already over"),
 
     // 라운드
+    INVALID_ROUND("유효하지 않은 라운드 번호입니다.", HttpStatus.BAD_REQUEST, "Invalid round number"),
     QUESTION_NOT_FOUND("문제를 찾을 수 없습니다.", HttpStatus.NOT_FOUND, "Question not found"),
 
     // 유저

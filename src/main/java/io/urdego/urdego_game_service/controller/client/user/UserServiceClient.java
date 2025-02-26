@@ -2,7 +2,10 @@ package io.urdego.urdego_game_service.controller.client.user;
 
 import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
 import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
+import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
+import io.urdego.urdego_game_service.controller.game.dto.response.LevelRes;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -17,4 +20,7 @@ public interface UserServiceClient {
 
     @PostMapping("/api/user-service/users")
     List<UserRes> getUsers(@RequestBody UserInfoListReq request);
+
+    @PostMapping("/api/user-service/users/add/exp")
+    List<LevelRes> addUserExp(@RequestBody List<GameEndRes.Exp> requests);
 }

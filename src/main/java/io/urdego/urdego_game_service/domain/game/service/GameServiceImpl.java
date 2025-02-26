@@ -6,13 +6,10 @@ import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
 import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
 import io.urdego.urdego_game_service.controller.game.dto.request.ScoreReq;
-import io.urdego.urdego_game_service.controller.game.dto.response.GameCreateRes;
-import io.urdego.urdego_game_service.controller.game.dto.response.GameEndRes;
+import io.urdego.urdego_game_service.controller.game.dto.response.*;
 import io.urdego.urdego_game_service.common.enums.Status;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.game.GameException;
-import io.urdego.urdego_game_service.controller.game.dto.response.PlayerScore;
-import io.urdego.urdego_game_service.controller.game.dto.response.ScoreRes;
 import io.urdego.urdego_game_service.controller.room.dto.response.PlayerRes;
 import io.urdego.urdego_game_service.domain.game.entity.Game;
 import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
@@ -84,6 +81,9 @@ public class GameServiceImpl implements GameService {
     public ScoreRes giveScores(ScoreReq request) {
         Game game = findGameById(request.gameId());
 
+        if (request.roundNum() > game.getQuestionIds().size()) {
+            throw new GameException(ExceptionMessage.INVALID_ROUND, "roundNum: " + request.roundNum());
+        }
         String questionId = game.getQuestionIds().get(request.roundNum() - 1);
         List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
 
@@ -121,12 +121,15 @@ public class GameServiceImpl implements GameService {
         game.setEndedAt(Instant.now());
         log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        Map<Long, Integer> exp = calculateExp(game.getTotalScores());
-        log.info("경험치 계산 결과: {}", exp);
+        List<GameEndRes.Exp> expList = calculateExp(game.getTotalScores());
+        log.info("경험치 계산 결과: {}", expList);
 
+        List<LevelRes> levelList = userServiceClient.addUserExp(expList);
+
+        roomService.deleteRoom(game.getRoomId());
         playerService.deletePlayers(game.getTotalScores().keySet());
 
-        return GameEndRes.of(game, exp);
+        return GameEndRes.of(game, expList, levelList);
     }
 
     // 게임 정보 조회
@@ -198,14 +201,13 @@ public class GameServiceImpl implements GameService {
     }
 
     // 경험치 계산 (점수의 0.1%)
-    private Map<Long, Integer> calculateExp(Map<Long, Integer> totalScores) {
-        Map<Long, Integer> expMap = new HashMap<>();
-        totalScores.forEach((userId, score) -> {
-            int exp = (int) Math.ceil(score * 0.01);
-            expMap.put(userId, exp);
-        });
-
-        return expMap;
+    private List<GameEndRes.Exp> calculateExp(Map<Long, Integer> totalScores) {
+        return totalScores.entrySet().stream()
+                .map(entry -> new GameEndRes.Exp(
+                        entry.getKey(),
+                        (long) Math.ceil(entry.getValue() * 0.01)
+                ))
+                .toList();
     }
 
     // 랭킹 계산

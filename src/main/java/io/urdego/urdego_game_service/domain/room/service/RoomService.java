@@ -38,4 +38,7 @@ public interface RoomService {
     // 방 정보 조회
     @Transactional(readOnly = true)
     Room findRoomById(String roomId);
+
+    // 대기방 삭제
+    void deleteRoom(String roomId);
 }
