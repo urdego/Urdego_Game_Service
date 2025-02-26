@@ -83,11 +83,9 @@ public class RoomServiceImpl implements RoomService {
         List<RoomInfoRes> roomInfoList = roomList.stream()
                         .map(room -> {
                             Player hostInfo = hostMap.get(room.getHostId());
-                            if (hostInfo == null) {
-                                throw new PlayerException(ExceptionMessage.USER_NOT_FOUND, "hostId: " + room.getHostId());
-                            }
+                            PlayerRes simpleHostInfo = (hostInfo != null) ? PlayerRes.from(hostInfo) : PlayerRes.defaultInstance();
 
-                            return RoomInfoRes.from(room, PlayerRes.from(hostInfo));
+                            return RoomInfoRes.from(room, simpleHostInfo);
                         })
                         .toList();
 

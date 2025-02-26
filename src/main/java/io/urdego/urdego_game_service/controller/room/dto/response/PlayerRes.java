@@ -8,6 +8,15 @@ public record PlayerRes(
         String activeCharacter,
         int level
 ) {
+    public static PlayerRes defaultInstance() {
+        return new PlayerRes(
+                0L,
+                "urdego",
+                "BASIC",
+                1
+        );
+    }
+
     public static PlayerRes from(Player player) {
         return new PlayerRes(
                 player.getUserId(),
