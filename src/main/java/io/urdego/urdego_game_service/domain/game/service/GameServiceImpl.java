@@ -87,17 +87,41 @@ public class GameServiceImpl implements GameService {
             throw new GameException(ExceptionMessage.INVALID_ROUND, "roundNum: " + request.roundNum());
         }
         String questionId = game.getQuestionIds().get(request.roundNum() - 1);
-        List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
 
-        if (answers.isEmpty()) {
-            log.warn("점수 계산 실패 | gameId: {}, roundNum: {} | 정답 데이터가 없습니다.", request.gameId(), request.roundNum());
+        String lockKey = "lock:game_score:" + request.gameId();
+        RLock lock = redissonClient.getLock(lockKey);
+
+        try {
+            if (lock.tryLock(5, 10, TimeUnit.SECONDS)) {
+                try {
+                    List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
+                    Room room = roomService.findRoomById(game.getRoomId());
+                    List<Long> playerIds = room.getCurrentPlayers();
+
+                    Map<Long, Answer> answerMap = answers.stream()
+                                    .collect(Collectors.toMap(Answer::getUserId, answer -> answer));
+
+                    for (Long playerId : playerIds) {
+                        if (!answerMap.containsKey(playerId)) {
+                            log.warn("플레이어 미응답 감지 | userId: {} | 0점 처리", playerId);
+                        }
+                    }
+
+                    updateRoundScores(game, request.roundNum(), answers);
+                    updateTotalScores(game);
+
+                    gameRepository.save(game);
+                    log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
+                } finally {
+                    lock.unlock();
+                }
+            } else {
+                log.warn("점수 업데이트 중복 요청 방지 | gameId: {}", request.gameId());
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException("점수 계산 락 획득 실패", e);
         }
-
-        updateRoundScores(game, request.roundNum(), answers);
-        updateTotalScores(game);
-
-        gameRepository.save(game);
-        log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
 
         Room room = roomService.findRoomById(game.getRoomId());
         List<Long> playerIds = room.getCurrentPlayers();

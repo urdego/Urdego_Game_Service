@@ -89,8 +89,10 @@ public class RoundServiceImpl implements RoundService {
                 break;
             }
 
+            maxAttempts--;
+
             // 모두 중복되어 더이상 남은 컨텐츠가 없을 경우
-            if (--maxAttempts <= 0) {
+            if (maxAttempts <= 0) {
                 log.warn("새로운 좌표를 찾을 수 없어 게임 제공 컨텐츠로 대체합니다.");
                 List<ContentRes> fallbackContents = contentServiceClient.getUrdegoContents(1);
                 ContentRes fallbackContent = fallbackContents.get(0);
