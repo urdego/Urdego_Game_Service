@@ -36,7 +36,7 @@ public class RedisConfig {
     public RedissonClient redissonClient() {
         Config config = new Config();
         config.useSingleServer()
-                .setAddress("redis://localhost:6379");
+                .setAddress("redis://redis_game:6380");
         return Redisson.create(config);
     }
 }
