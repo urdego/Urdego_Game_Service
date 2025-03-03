@@ -2,8 +2,6 @@ package io.urdego.urdego_game_service.domain.game.service;
 
 import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
-import io.urdego.urdego_game_service.controller.client.user.dto.UserInfoListReq;
-import io.urdego.urdego_game_service.controller.client.user.dto.UserRes;
 import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
 import io.urdego.urdego_game_service.controller.game.dto.request.ScoreReq;
 import io.urdego.urdego_game_service.controller.game.dto.response.*;
@@ -22,11 +20,14 @@ import io.urdego.urdego_game_service.domain.round.entity.Question;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RLock;
+import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -41,6 +42,7 @@ public class GameServiceImpl implements GameService {
     private final RoundService roundService;
     private final PlayerService playerService;
     private final UserServiceClient userServiceClient;
+    private final RedissonClient redissonClient;
 
     // 게임 생성
     @Override
@@ -109,27 +111,48 @@ public class GameServiceImpl implements GameService {
         return ScoreRes.from(game, request.roundNum(), room.getTotalRounds(), roundScoreList, totalScoreList);
     }
 
-    // 게임 종료
+    // 게임 종료 (분산 락 적용)
     @Override
     public GameEndRes finishGame(String gameId) {
+        String lockKey = "lock:game:" + gameId;
+        RLock lock = redissonClient.getLock(lockKey);
+
         Game game = findGameById(gameId);
+
         if (game.getStatus() == Status.COMPLETED) {
-            throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED);
+            return GameEndRes.of(game, getExpList(game), getLevelList(game));
         }
-        game = updateGameStatusById(gameId, Status.COMPLETED);
 
-        game.setEndedAt(Instant.now());
-        log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
+        try {
+            boolean available = lock.tryLock(5, 20, TimeUnit.SECONDS);
+            if (!available) {
+                throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED, "게임 종료 중 다른 요청이 처리됨");
+            }
 
-        List<GameEndRes.Exp> expList = calculateExp(game.getTotalScores());
-        log.info("경험치 계산 결과: {}", expList);
+            game = updateGameStatusById(gameId, Status.COMPLETED);
 
-        List<LevelRes> levelList = userServiceClient.addUserExp(expList);
+            game.setEndedAt(Instant.now());
+            log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
-        roomService.deleteRoom(game.getRoomId());
-        playerService.deletePlayers(game.getTotalScores().keySet());
+            List<GameEndRes.Exp> expList = calculateExp(game.getTotalScores());
+            log.info("경험치 계산 결과: {}", expList);
 
-        return GameEndRes.of(game, expList, levelList);
+            List<LevelRes> levelList = userServiceClient.addUserExp(expList);
+
+            roomService.deleteRoom(game.getRoomId());
+            playerService.deletePlayers(game.getTotalScores().keySet());
+
+            return GameEndRes.of(game, expList, levelList);
+
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();;
+            throw new RuntimeException("게임 종료 락 획득 실패", e);
+
+        } finally {
+            if (lock.isHeldByCurrentThread()) {
+                lock.unlock();
+            }
+        }
     }
 
     // 게임 정보 조회
@@ -147,6 +170,16 @@ public class GameServiceImpl implements GameService {
         gameRepository.save(game);
 
         return game;
+    }
+
+    // 해당 게임 플레이어들의 경험치 계산
+    private List<GameEndRes.Exp> getExpList(Game game) {
+        return calculateExp(game.getTotalScores());
+    }
+
+    // 해당 게임 플레이어들의 레벨 반영
+    private List<LevelRes> getLevelList(Game game) {
+        return userServiceClient.addUserExp(getExpList(game));
     }
 
     // 게임 상태 변경
