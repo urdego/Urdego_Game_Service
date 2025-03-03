@@ -2,7 +2,6 @@ package io.urdego.urdego_game_service.domain.room.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.room.dto.request.ContentSelectReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.PlayerReq;
 import io.urdego.urdego_game_service.controller.room.dto.request.RoomCreateReq;
