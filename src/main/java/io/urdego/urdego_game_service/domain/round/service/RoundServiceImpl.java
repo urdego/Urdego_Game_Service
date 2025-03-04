@@ -58,7 +58,7 @@ public class RoundServiceImpl implements RoundService {
                 })
                 .toList();
 
-        log.info("전체 플레이어 컨텐츠 조회 완료 | 총 개수: {}", allContents.size());
+        log.info("전체 플레이어 컨텐츠 조회 완료 | {}개", allContents.size());
 
         Map<String, List<ContentRes>> groupedContents = allContents.stream()
                         .collect(Collectors.groupingBy(content -> content.latitude() + "," + content.longitude()));
@@ -67,7 +67,7 @@ public class RoundServiceImpl implements RoundService {
 
         if (contentGroups.size() < totalRounds) {
             int needed = totalRounds - contentGroups.size();
-            log.info("자체 컨텐츠 추가 요청: {}개", needed);
+            log.info("자체 컨텐츠 추가 요청 | {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
 
             Map<String, List<ContentRes>> newGroupedContents = serviceContents.stream()

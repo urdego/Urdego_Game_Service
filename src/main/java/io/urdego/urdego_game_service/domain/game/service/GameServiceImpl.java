@@ -89,7 +89,9 @@ public class GameServiceImpl implements GameService {
         RLock lock = redissonClient.getLock(lockKey);
 
         try {
+            log.info("🔒 점수 계산 락 획득 시도 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
             if (lock.tryLock(5, 10, TimeUnit.SECONDS)) {
+                log.info("✅ 점수 계산 락 획득 성공 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
                 try {
                     List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
                     Room room = roomService.findRoomById(game.getRoomId());
@@ -110,7 +112,10 @@ public class GameServiceImpl implements GameService {
                     gameRepository.save(game);
                     log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
                 } finally {
-                    lock.unlock();
+                    if (lock.isHeldByCurrentThread()) {
+                        lock.unlock();
+                        log.info("🔓 점수 계산 락 해제 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
+                    }
                 }
             } else {
                 log.warn("점수 업데이트 중복 요청 방지 | gameId: {}", request.gameId());
@@ -145,18 +150,20 @@ public class GameServiceImpl implements GameService {
         }
 
         try {
+            log.info("🔒 게임 종료 락 획득 시도 | gameId: {}", gameId);
             boolean available = lock.tryLock(5, 20, TimeUnit.SECONDS);
             if (!available) {
                 throw new GameException(ExceptionMessage.GAME_ALREADY_COMPLETED, "게임 종료 중 다른 요청이 처리됨");
             }
 
+            log.info("✅ 게임 종료 락 획득 성공 | gameId: {}", gameId);
             game = updateGameStatusById(gameId, Status.COMPLETED);
 
             game.setEndedAt(Instant.now());
             log.info("게임 종료 | gameId: {}, endedAt: {}", game.getGameId(), game.getEndedAt());
 
             List<GameEndRes.Exp> expList = calculateExp(game.getTotalScores());
-            log.info("경험치 계산 결과: {}", expList);
+            log.info("경험치 계산 결과 | {}", expList);
 
             List<LevelRes> levelList = userServiceClient.addUserExp(expList);
 
@@ -172,6 +179,7 @@ public class GameServiceImpl implements GameService {
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
+                log.info("🔓 게임 종료 락 해제 | gameId: {}", gameId);
             }
         }
     }
@@ -226,7 +234,7 @@ public class GameServiceImpl implements GameService {
 
         Map<Long, Integer> roundScore = roundScores.get(roundNum);
         for (Answer answer : answers) {
-            log.info("Answer: userId={}, score={}", answer.getUserId(), answer.getScore());
+            log.info("플레이어 정답 제출 | userId: {} | {}점", answer.getUserId(), answer.getScore());
             roundScore.put(answer.getUserId(), answer.getScore());
         }
 
@@ -236,7 +244,7 @@ public class GameServiceImpl implements GameService {
 
         game.setRoundScores(roundScores);
 
-        log.info("{}라운드 점수가 업데이트 되었습니다. : {}", roundNum, game.getRoundScores());
+        log.info("{}라운드 점수 업데이트 | {}", roundNum, game.getRoundScores());
     }
 
     // 전체 점수 업뎃
@@ -251,7 +259,7 @@ public class GameServiceImpl implements GameService {
 
         game.setTotalScores(totalScores);
 
-        log.info("전체 점수가 업데이트 되었습니다. : {}", game.getTotalScores());
+        log.info("전체 점수 업데이트 | {}", game.getTotalScores());
     }
 
     // 경험치 계산 (점수의 0.1%)
