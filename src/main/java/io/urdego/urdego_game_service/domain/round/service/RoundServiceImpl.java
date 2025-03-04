@@ -42,67 +42,51 @@ public class RoundServiceImpl implements RoundService {
 
     // 문제 생성
     @Override
-    public Question createQuestion(String roomId, int roundNum) {
+    public List<Question> createQuestions(String roomId, int totalRounds) {
         Room room = roomService.findRoomById(roomId);
         ObjectMapper objectMapper = new ObjectMapper();
 
-        // 해당 게임의 기존 문제 조회 (중복 방지)
-        List<Question> existingQuestions = questionRepository.findAllByRoomId(roomId);
-        Set<String> existingCoordinates = existingQuestions.stream()
-                .map(q -> q.getLatitude() + "," + q.getLongitude())
-                .collect(Collectors.toSet());
-
-        List<String> allContents = room.getPlayerContents().values()
+        List<ContentRes> allContents = room.getPlayerContents().values()
                 .stream()
                 .flatMap(jsonContent -> {
                     try {
-                        return objectMapper.readValue(jsonContent, new TypeReference<List<String>>() {}).stream();
+                        return objectMapper.readValue(jsonContent, new TypeReference<List<String>>() {}).stream()
+                                .map(contentId -> contentServiceClient.getContent(Long.valueOf(contentId)));
                     } catch (Exception e) {
                         throw new RuntimeException("JSON 역직렬화 실패", e);
                     }
                 })
-                .collect(Collectors.toList());
+                .toList();
 
-        log.info("전체 플레이어 컨텐츠 (등록된 ID): {}", allContents);
+        log.info("전체 플레이어 컨텐츠 조회 완료 | 총 개수: {}", allContents.size());
 
-        // 전체 라운드 수 이상의 컨텐츠가 준비되지 않았으면?
-        if (allContents.size() < room.getTotalRounds()) {
-            int needed = room.getTotalRounds() - allContents.size();
-            log.info("사용자 제공 컨텐츠 부족 | 게임 제공 컨텐츠 추가 요청: {}개", needed);
+        Map<String, List<ContentRes>> groupedContents = allContents.stream()
+                        .collect(Collectors.groupingBy(content -> content.latitude() + "," + content.longitude()));
+
+        List<List<ContentRes>> contentGroups = new ArrayList<>(groupedContents.values());
+
+        if (contentGroups.size() < totalRounds) {
+            int needed = totalRounds - contentGroups.size();
+            log.info("자체 컨텐츠 추가 요청: {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
-            serviceContents.forEach(content -> allContents.add(content.contentId().toString()));
-        }
-        log.info("최종 allContents: {}", allContents);
 
-        Collections.shuffle(allContents);
-        Question newQuestion = null;
-        int maxAttempts = allContents.size();
+            Map<String, List<ContentRes>> newGroupedContents = serviceContents.stream()
+                    .collect(Collectors.groupingBy(content -> content.latitude() + "," + content.longitude()));
 
-        for (String contentId : allContents) {
-            ContentRes firstContent = contentServiceClient.getContent(Long.valueOf(contentId));
-            String coordinateKey = firstContent.latitude() + "," + firstContent.longitude();
-
-            // 중복되지 않은 좌표를 찾으면 바로 문제 생성
-            if (!existingCoordinates.contains(coordinateKey) || existingQuestions.isEmpty()) {
-                existingCoordinates.add(coordinateKey);
-                newQuestion = buildQuestion(roomId, roundNum, firstContent, allContents);
-                break;
-            }
-
-            maxAttempts--;
-
-            // 모두 중복되어 더이상 남은 컨텐츠가 없을 경우
-            if (maxAttempts <= 0) {
-                log.warn("새로운 좌표를 찾을 수 없어 게임 제공 컨텐츠로 대체합니다.");
-                List<ContentRes> fallbackContents = contentServiceClient.getUrdegoContents(1);
-                ContentRes fallbackContent = fallbackContents.get(0);
-                newQuestion = buildQuestion(roomId, roundNum, fallbackContent, allContents);
-                break;
-            }
+            contentGroups.addAll(newGroupedContents.values());
         }
 
-        log.info("문제 생성 | roomId: {}, roundNum: {}, coordinate:{}. {}", roomId, roundNum, newQuestion.getLatitude(), newQuestion.getLongitude());
-        return questionRepository.save(newQuestion);
+        List<Question> questions = new ArrayList<>();
+        for (int round = 0; round < totalRounds; round++) {
+            List<ContentRes> roundContents = contentGroups.get(round);
+            Question question = buildQuestion(roomId, round + 1, roundContents);
+            questions.add(question);
+        }
+
+        log.info("문제 생성 완료 | roomId: {}, 생성된 문제 개수: {}", roomId, questions.size());
+        questionRepository.saveAll(questions);
+
+        return questions;
     }
 
     // 문제 출제
@@ -196,23 +180,14 @@ public class RoundServiceImpl implements RoundService {
     }
 
     // 문제 저장
-    private Question buildQuestion(String roomId, int roundNum, ContentRes firstContent, List<String> allContents) {
+    private Question buildQuestion(String roomId, int roundNum, List<ContentRes> roundContents) {
+        ContentRes firstContent = roundContents.get(0);
         double targetLatitude = firstContent.latitude();
         double targetLongitude = firstContent.longitude();
 
-        Map<String, ContentRes> contentMap = allContents.stream()
-                .distinct()
-                .collect(Collectors.toMap(contentId -> contentId, contentId -> {
-                    ContentRes content = contentServiceClient.getContent(Long.valueOf(contentId));
-                    log.info("🔍 컨텐츠 조회 | contentId: {}, 좌표: {}, {}", contentId, content.latitude(), content.longitude());
-                    return content;
-                }));
-
-        // 동일한 위치를 가진 컨텐츠들로 필터링
-        List<String> selectedContents = contentMap.values().stream()
-                .filter(content -> content.latitude() == targetLatitude && content.longitude() == targetLongitude)
-                .limit(3)
+        List<String> selectedContents = roundContents.stream()
                 .map(ContentRes::url)
+                .limit(3)
                 .collect(Collectors.toList());
 
         return Question.builder()

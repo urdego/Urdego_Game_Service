@@ -66,11 +66,8 @@ public class GameServiceImpl implements GameService {
         }
 
         // Question 생성
-        for (int roundNum = 1; roundNum <= room.getTotalRounds(); roundNum++) {
-            log.info("{}라운드 문제 생성 중...", roundNum);
-            Question question = roundService.createQuestion(game.getRoomId(), roundNum);
-            game.getQuestionIds().add(question.getQuestionId());
-        }
+        List<Question> questions = roundService.createQuestions(game.getRoomId(), room.getTotalRounds());
+        game.setQuestionIds(questions.stream().map(Question::getQuestionId).toList());
 
         gameRepository.save(game);
         log.info("게임 생성 | gameId: {}, roomId: {}", game.getGameId(), game.getRoomId());
