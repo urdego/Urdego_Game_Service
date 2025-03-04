@@ -10,6 +10,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @SpringBootApplication
 public class UrdegoGameServiceApplication {
 
+    
     public static void main(String[] args) {
         SpringApplication.run(UrdegoGameServiceApplication.class, args);
     }
