@@ -136,7 +136,7 @@ public class RoomServiceImpl implements RoomService {
                 log.info("방장 변경 | roomId: {}, newHost: {}", room.getRoomId(), room.getHostId());
             } else {
                 roomRepository.delete(room);
-                log.info("방 삭제됨 | roomId: {}", room.getRoomId());
+                log.info("방 삭제 | roomId: {}", room.getRoomId());
                 return null;
             }
         }
@@ -172,7 +172,7 @@ public class RoomServiceImpl implements RoomService {
 
             room.getPlayerContents().put(request.userId(), jsonContentList);
             roomRepository.save(room);
-            log.info("컨텐츠 등록됨 | userId: {}, contentIds:{}", room.getPlayerContents().keySet(), room.getPlayerContents().values());
+            log.info("컨텐츠 등록 | userId: {}, contentIds:{}", room.getPlayerContents().keySet(), room.getPlayerContents().values());
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Json 직렬화 오류", e);
         }
