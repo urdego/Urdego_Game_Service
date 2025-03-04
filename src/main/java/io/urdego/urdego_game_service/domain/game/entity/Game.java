@@ -4,6 +4,7 @@ import io.urdego.urdego_game_service.common.enums.Status;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
+import org.springframework.data.redis.core.index.Indexed;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,17 +18,18 @@ public class Game {
 
     @Id
     private String gameId;
+    @Indexed
     private String roomId;
     private Status status;
     private List<Long> players;
     private List<String> questionIds;
-    private Map<Integer, Map<Long, Integer>> roundScores;
+    private Map<String, String> roundScores;
     private Map<Long, Integer> totalScores;
     private Instant startedAt;
     private Instant endedAt;
 
     @Builder
-    public Game(String gameId, String roomId, Status status, List<Long> players, List<String> questionIds, Map<Integer, Map<Long, Integer>> roundScores, Map<Long, Integer> totalScores, Instant startedAt, Instant endedAt) {
+    public Game(String gameId, String roomId, Status status, List<Long> players, List<String> questionIds, Map<String, String> roundScores, Map<Long, Integer> totalScores, Instant startedAt, Instant endedAt) {
         this.gameId = gameId;
         this.roomId = roomId;
         this.status = status;

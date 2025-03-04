@@ -1,5 +1,8 @@
 package io.urdego.urdego_game_service.domain.game.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.urdego.urdego_game_service.common.exception.player.PlayerException;
 import io.urdego.urdego_game_service.controller.client.user.UserServiceClient;
 import io.urdego.urdego_game_service.controller.game.dto.request.GameCreateReq;
@@ -15,7 +18,6 @@ import io.urdego.urdego_game_service.domain.player.entity.Player;
 import io.urdego.urdego_game_service.domain.player.service.PlayerService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
 import io.urdego.urdego_game_service.domain.room.service.RoomService;
-import io.urdego.urdego_game_service.domain.round.entity.Answer;
 import io.urdego.urdego_game_service.domain.round.entity.Question;
 import io.urdego.urdego_game_service.domain.round.service.RoundService;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +77,7 @@ public class GameServiceImpl implements GameService {
         return GameCreateRes.from(game);
     }
 
-    // 점수 계산
+    // 점수 조회
     @Override
     public ScoreRes giveScores(ScoreReq request) {
         Game game = findGameById(request.gameId());
@@ -83,47 +85,19 @@ public class GameServiceImpl implements GameService {
         if (request.roundNum() > game.getQuestionIds().size()) {
             throw new GameException(ExceptionMessage.INVALID_ROUND, "roundNum: " + request.roundNum());
         }
-        String questionId = game.getQuestionIds().get(request.roundNum() - 1);
 
-        String lockKey = "lock:game_score:" + request.gameId();
-        RLock lock = redissonClient.getLock(lockKey);
+        String roundKey = String.valueOf(request.roundNum());
 
-        try {
-            log.info("🔒 점수 계산 락 획득 시도 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
-            if (lock.tryLock(5, 10, TimeUnit.SECONDS)) {
-                log.info("✅ 점수 계산 락 획득 성공 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
-                try {
-                    List<Answer> answers = roundService.findAnswersByQuestionId(questionId);
-                    Room room = roomService.findRoomById(game.getRoomId());
-                    List<Long> playerIds = room.getCurrentPlayers();
-
-                    Map<Long, Answer> answerMap = answers.stream()
-                                    .collect(Collectors.toMap(Answer::getUserId, answer -> answer));
-
-                    for (Long playerId : playerIds) {
-                        if (!answerMap.containsKey(playerId)) {
-                            log.warn("플레이어 미응답 감지 | userId: {} | 0점 처리", playerId);
-                        }
-                    }
-
-                    updateRoundScores(game, request.roundNum(), answers);
-                    updateTotalScores(game);
-
-                    gameRepository.save(game);
-                    log.info("게임 점수 정보 | roundScores: {}, totalScores: {}", game.getRoundScores(), game.getTotalScores());
-                } finally {
-                    if (lock.isHeldByCurrentThread()) {
-                        lock.unlock();
-                        log.info("🔓 점수 계산 락 해제 | gameId: {}, roundNum: {}", request.gameId(), request.roundNum());
-                    }
-                }
-            } else {
-                log.warn("점수 업데이트 중복 요청 방지 | gameId: {}", request.gameId());
+        Map<Long, Integer> roundScores = new HashMap<>();
+        ObjectMapper objectMapper = new ObjectMapper();
+        if (game.getRoundScores().containsKey(roundKey)) {
+            try {
+                roundScores = objectMapper.readValue(game.getRoundScores().get(roundKey), new TypeReference<Map<Long, Integer>>() {});
+            } catch (JsonProcessingException e) {
+                log.error("JSON 역직렬화 실패 | roundScores: {}", game.getRoundScores().get(roundKey));
             }
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new RuntimeException("점수 계산 락 획득 실패", e);
         }
+        Map<Long, Integer> totalScores = game.getTotalScores();
 
         Room room = roomService.findRoomById(game.getRoomId());
         List<Long> playerIds = room.getCurrentPlayers();
@@ -131,8 +105,10 @@ public class GameServiceImpl implements GameService {
                 .map(playerService::getPlayer)
                 .toList();
 
-        List<PlayerScore> roundScoreList = calculateRanking(game.getRoundScores().getOrDefault(request.roundNum(), new HashMap<>()), players);
-        List<PlayerScore> totalScoreList = calculateRanking(game.getTotalScores(), players);
+        List<PlayerScore> roundScoreList = calculateRanking(roundScores, players);
+        List<PlayerScore> totalScoreList = calculateRanking(totalScores, players);
+
+        log.info("{}라운드 점수 조회 완료 | {}", request.roundNum(), roundScores);
 
         return ScoreRes.from(game, request.roundNum(), room.getTotalRounds(), roundScoreList, totalScoreList);
     }
@@ -186,19 +162,8 @@ public class GameServiceImpl implements GameService {
 
     // 게임 정보 조회
     private Game findGameById(String gameId) {
-        Game game = gameRepository.findById(gameId)
+        return gameRepository.findById(gameId)
                 .orElseThrow(() -> new GameException(ExceptionMessage.GAME_NOT_FOUND));
-
-        if (game.getRoundScores() == null) {
-            game.setRoundScores(new HashMap<>());
-        }
-        if (game.getTotalScores() == null) {
-            game.setTotalScores(new HashMap<>());
-        }
-
-        gameRepository.save(game);
-
-        return game;
     }
 
     // 해당 게임 플레이어들의 경험치 계산
@@ -220,46 +185,6 @@ public class GameServiceImpl implements GameService {
         log.info("게임 상태 변경 | gameId: {}, Status: {}", game.getGameId(), game.getStatus());
 
         return updatedGame;
-    }
-
-    // 라운드 점수 업뎃
-    private void updateRoundScores(Game game, int roundNum, List<Answer> answers) {
-        Map<Integer, Map<Long, Integer>> roundScores = game.getRoundScores();
-
-        if (roundScores == null) {
-            roundScores = new HashMap<>();
-        }
-
-        roundScores.putIfAbsent(roundNum, new HashMap<>());
-
-        Map<Long, Integer> roundScore = roundScores.get(roundNum);
-        for (Answer answer : answers) {
-            log.info("플레이어 정답 제출 | userId: {} | {}점", answer.getUserId(), answer.getScore());
-            roundScore.put(answer.getUserId(), answer.getScore());
-        }
-
-        for (Long player : game.getPlayers()) {
-            roundScore.putIfAbsent(player, 0);
-        }
-
-        game.setRoundScores(roundScores);
-
-        log.info("{}라운드 점수 업데이트 | {}", roundNum, game.getRoundScores());
-    }
-
-    // 전체 점수 업뎃
-    private void updateTotalScores(Game game) {
-        Map<Long, Integer> totalScores = game.getTotalScores();
-
-        game.getRoundScores().forEach((roundNum, roundScore) -> {
-            roundScore.forEach((userId, score) -> {
-                totalScores.put(userId, totalScores.getOrDefault(userId, 0) + score);
-            });
-        });
-
-        game.setTotalScores(totalScores);
-
-        log.info("전체 점수 업데이트 | {}", game.getTotalScores());
     }
 
     // 경험치 계산 (점수의 0.1%)

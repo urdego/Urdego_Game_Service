@@ -1,7 +1,9 @@
 package io.urdego.urdego_game_service.domain.round.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.urdego.urdego_game_service.common.exception.game.GameException;
 import io.urdego.urdego_game_service.controller.round.dto.request.AnswerReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.CoordinateReq;
 import io.urdego.urdego_game_service.controller.round.dto.request.QuestionReq;
@@ -12,6 +14,8 @@ import io.urdego.urdego_game_service.controller.client.content.ContentServiceCli
 import io.urdego.urdego_game_service.controller.client.content.dto.ContentRes;
 import io.urdego.urdego_game_service.common.exception.ExceptionMessage;
 import io.urdego.urdego_game_service.common.exception.round.QuestionException;
+import io.urdego.urdego_game_service.domain.game.entity.Game;
+import io.urdego.urdego_game_service.domain.game.repository.GameRepository;
 import io.urdego.urdego_game_service.domain.player.entity.Player;
 import io.urdego.urdego_game_service.domain.player.service.PlayerService;
 import io.urdego.urdego_game_service.domain.room.entity.Room;
@@ -36,9 +40,11 @@ public class RoundServiceImpl implements RoundService {
 
     private final QuestionRepository questionRepository;
     private final AnswerRepository answerRepository;
+    private final GameRepository gameRepository;
     private final ContentServiceClient contentServiceClient;
     private final RoomService roomService;
     private final PlayerService playerService;
+
 
     // 문제 생성
     @Override
@@ -58,7 +64,7 @@ public class RoundServiceImpl implements RoundService {
                 })
                 .toList();
 
-        log.info("전체 플레이어 컨텐츠 조회 완료 | {}개", allContents.size());
+        log.info("등록된 플레이어 컨텐츠 | {}개", allContents.size());
 
         Map<String, List<ContentRes>> groupedContents = allContents.stream()
                         .collect(Collectors.groupingBy(content -> content.latitude() + "," + content.longitude()));
@@ -67,7 +73,7 @@ public class RoundServiceImpl implements RoundService {
 
         if (contentGroups.size() < totalRounds) {
             int needed = totalRounds - contentGroups.size();
-            log.info("자체 컨텐츠 추가 요청 | {}개", needed);
+            log.info("자체 컨텐츠 추가 | {}개", needed);
             List<ContentRes> serviceContents = contentServiceClient.getUrdegoContents(needed);
 
             Map<String, List<ContentRes>> newGroupedContents = serviceContents.stream()
@@ -83,7 +89,7 @@ public class RoundServiceImpl implements RoundService {
             questions.add(question);
         }
 
-        log.info("문제 생성 완료 | roomId: {}, 생성된 문제 개수: {}", roomId, questions.size());
+        log.info("문제 생성 | roomId: {}, 생성된 문제 개수: {}", roomId, questions.size());
         questionRepository.saveAll(questions);
 
         return questions;
@@ -116,8 +122,47 @@ public class RoundServiceImpl implements RoundService {
                 .build();
 
         answerRepository.save(answer);
-        log.info("정답 저장 완료 | userId: {}, questionId: {}", answer.getUserId(), answer.getQuestionId());
+        log.info("정답 저장 | userId: {}, questionId: {}", answer.getUserId(), answer.getQuestionId());
 
+        Game game = gameRepository.findByRoomId(question.getRoomId())
+                .orElseThrow(() -> new GameException(ExceptionMessage.GAME_NOT_FOUND));
+
+        String roundKey = String.valueOf(question.getRoundNum());
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        if (game.getRoundScores() == null) {
+            game.setRoundScores(new HashMap<>());
+        }
+        if (game.getTotalScores() == null) {
+            game.setTotalScores(new HashMap<>());
+        }
+
+        Map<Long, Integer> roundScoreMap = new HashMap<>();
+        if (game.getRoundScores().containsKey(roundKey)) {
+            try {
+                roundScoreMap = objectMapper.readValue(game.getRoundScores().get(roundKey), new TypeReference<Map<Long, Integer>>() {});
+            } catch (JsonProcessingException e) {
+                log.error("JSON 역직렬화 실패 | roundScores: {}", game.getRoundScores().get(roundKey));
+            }
+        }
+
+        // ✅ 점수 저장
+        roundScoreMap.put(answer.getUserId(), answer.getScore());
+
+        // ✅ JSON 직렬화 후 저장
+        try {
+            game.getRoundScores().put(roundKey, objectMapper.writeValueAsString(roundScoreMap));
+        } catch (JsonProcessingException e) {
+            log.error("JSON 직렬화 실패 | roundScoreMap: {}", roundScoreMap);
+        }
+
+        // ✅ 전체 점수 업데이트
+        game.getTotalScores().merge(answer.getUserId(), score, Integer::sum);
+
+        // ✅ 게임 저장
+        gameRepository.save(game);
+
+        log.info("점수 반영 | userId: {}, roundNum: {}, score: {}, gameId: {}", answer.getUserId(), question.getRoundNum(), score, game.getGameId());
         return AnswerRes.from(question.getRoomId(), answer);
     }
 
