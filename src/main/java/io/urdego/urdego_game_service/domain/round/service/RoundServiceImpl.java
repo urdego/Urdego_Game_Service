@@ -264,10 +264,8 @@ public class RoundServiceImpl implements RoundService {
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distance = EARTH_RADIUS * c;
 
-        log.info("거리 계산 | distance: {}", distance);
-        return distance;
+        return EARTH_RADIUS * c;
     }
 
     // 점수 계산
@@ -279,9 +277,6 @@ public class RoundServiceImpl implements RoundService {
             return 0;
         }
 
-        int score = (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
-
-        log.info("점수 계산 | score: {}", score);
-        return score;
+        return (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
     }
 }
