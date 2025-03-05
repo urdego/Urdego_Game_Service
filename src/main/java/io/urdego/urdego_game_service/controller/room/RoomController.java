@@ -15,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -68,6 +69,14 @@ public class RoomController {
     @PostMapping("/select-content")
     public ResponseEntity<Void> selectContent(@RequestBody ContentSelectReq request) {
         roomService.registerContents(request);
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Tag(name = "백엔드 API")
+    @Operation(summary = "대기방 삭제", description = "게임 종료 후 대기방 삭제")
+    @PostMapping("/delete")
+    public ResponseEntity<Void> deleteRoom(@RequestBody Map<String, String> request) {
+        roomService.deleteRoom(request.get("roomId"));
         return new ResponseEntity<>(HttpStatus.OK);
     }
 

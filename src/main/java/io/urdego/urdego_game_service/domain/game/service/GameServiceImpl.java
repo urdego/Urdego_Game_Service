@@ -143,19 +143,16 @@ public class GameServiceImpl implements GameService {
 
             List<LevelRes> levelList = userServiceClient.addUserExp(expList);
 
-            roomService.deleteRoom(game.getRoomId());
-            playerService.deletePlayers(game.getTotalScores().keySet());
-
             return GameEndRes.of(game, expList, levelList);
 
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();;
-            throw new RuntimeException("게임 종료 락 획득 실패", e);
+            throw new RuntimeException("🔓 게임 종료 락 획득 실패", e);
 
         } finally {
             if (lock.isHeldByCurrentThread()) {
                 lock.unlock();
-                log.info("🔓 게임 종료 락 해제 | gameId: {}", gameId);
+                log.info("게임 종료 락 해제 | gameId: {}", gameId);
             }
         }
     }

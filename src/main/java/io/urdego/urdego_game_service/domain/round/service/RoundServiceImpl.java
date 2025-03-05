@@ -146,23 +146,30 @@ public class RoundServiceImpl implements RoundService {
             }
         }
 
-        // ✅ 점수 저장
+        Room room = roomService.findRoomById(game.getRoomId());
+        List<Long> playerIds = room.getCurrentPlayers();
+
         roundScoreMap.put(answer.getUserId(), answer.getScore());
 
-        // ✅ JSON 직렬화 후 저장
+        for (Long playerId : playerIds) {
+            roundScoreMap.putIfAbsent(playerId, 0);
+        }
+
         try {
             game.getRoundScores().put(roundKey, objectMapper.writeValueAsString(roundScoreMap));
         } catch (JsonProcessingException e) {
             log.error("JSON 직렬화 실패 | roundScoreMap: {}", roundScoreMap);
         }
 
-        // ✅ 전체 점수 업데이트
         game.getTotalScores().merge(answer.getUserId(), score, Integer::sum);
 
-        // ✅ 게임 저장
-        gameRepository.save(game);
+        for (Long playerId : playerIds) {
+            game.getTotalScores().putIfAbsent(playerId, game.getTotalScores().getOrDefault(playerId, 0));
+        }
 
+        gameRepository.save(game);
         log.info("점수 반영 | userId: {}, roundNum: {}, score: {}, gameId: {}", answer.getUserId(), question.getRoundNum(), score, game.getGameId());
+
         return AnswerRes.from(question.getRoomId(), answer);
     }
 
@@ -257,10 +264,8 @@ public class RoundServiceImpl implements RoundService {
                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
                 * Math.sin(dLon / 2) * Math.sin(dLon / 2);
         double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        double distance = EARTH_RADIUS * c;
 
-        log.info("거리 계산 | distance: {}", distance);
-        return distance;
+        return EARTH_RADIUS * c;
     }
 
     // 점수 계산
@@ -272,9 +277,6 @@ public class RoundServiceImpl implements RoundService {
             return 0;
         }
 
-        int score = (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
-
-        log.info("점수 계산 | score: {}", score);
-        return score;
+        return (int) Math.max(0, maxScore - (distance / maxDistance) * maxScore);
     }
 }
