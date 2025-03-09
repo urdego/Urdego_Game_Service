@@ -71,13 +71,24 @@ public class RoomServiceImpl implements RoomService {
 
         List<Long> hostIds = roomList.stream()
                 .map(Room::getHostId)
+                .filter(Objects::nonNull)
                 .distinct()
                 .toList();
 
        Map<Long, Player> hostMap = hostIds.stream()
-               .map(playerService::getPlayer)
-               .filter(Objects::nonNull)
-               .collect(Collectors.toMap(Player::getUserId, player -> player));
+               .collect(Collectors.toMap(
+                       hostId -> hostId,
+                       hostId -> {
+                           try {
+                               return playerService.getPlayer(hostId);
+                           } catch (Exception e) {
+                               log.warn("플레이어 정보를 가져오는 중 오류 발생 | hostId : {}", hostId);
+                               return null;
+                           }
+                       },
+                       // 중복 hostId가 있을 경우 기존 값 유지
+                       (existing, replacement) -> existing
+               ));
 
         List<RoomInfoRes> roomInfoList = roomList.stream()
                         .map(room -> {
