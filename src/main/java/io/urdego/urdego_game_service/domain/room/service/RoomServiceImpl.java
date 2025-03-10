@@ -62,6 +62,7 @@ public class RoomServiceImpl implements RoomService {
     public List<RoomInfoRes> getRoomList() {
         List<Room> roomList = StreamSupport.stream(roomRepository.findAll().spliterator(), false)
                 .filter(Objects::nonNull)
+                .filter(room -> room.getCurrentPlayers() != null && !room.getCurrentPlayers().isEmpty())
                 .toList();
 
         if (roomList.isEmpty()) {
@@ -142,7 +143,7 @@ public class RoomServiceImpl implements RoomService {
         room.getReadyStatus().remove(user);
 
         if (room.getHostId().equals(user)) {
-            if (!room.getCurrentPlayers().isEmpty()) {
+            if (room.getCurrentPlayers() != null && !room.getCurrentPlayers().isEmpty()) {
                 room.setHostId(room.getCurrentPlayers().get(0));
                 log.info("방장 변경 | roomId: {}, newHost: {}", room.getRoomId(), room.getHostId());
             } else {
