@@ -5,6 +5,7 @@ import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.redis.core.RedisHash;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -21,7 +22,7 @@ public class Room {
     private Long hostId;
     private int maxPlayers;
     private int totalRounds;
-    private List<Long> currentPlayers;
+    private List<Long> currentPlayers = new ArrayList<>();
     private Map<Long, String> playerContents;
     private Map<Long, Boolean> readyStatus;
 
